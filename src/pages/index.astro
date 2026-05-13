@@ -1,0 +1,244 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+//fetch and sorttutorials (by date)
+const allTutorials = await getCollection('tutorials');
+const recentTutorials = allTutorials
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 5); //show 5 recent
+
+//fetch and sort the goods (alphabetic)
+const allGoods = await getCollection('goods');
+const sortedGoods = allGoods.sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+//for search
+const combined_items = [...allGoods, ...allTutorials];
+
+const search_list = combined_items.map((item)=> {
+    return {
+        title: item.data.title,
+        url: `/${item.collection}/${item.id}`,
+        content: item.body
+}})
+---
+
+<BaseLayout title="Home">
+  <div style="display: flex; gap: 15px; font-weight: bold; margin-bottom: 1rem;">
+    <a href="/tutorials">[ALL TUTORIALS]</a>
+    <a href="/goods">[ALL GOODS]</a>
+  
+    <!-- search stuff -->
+    <button id="open-search-btn">[SEARCH]</button>
+  </div>
+
+  <!-- SEARCH MODAL  -->
+  <dialog id="search-modal">
+    <div class="modal-content">
+      <button class="close-btn" id="close-search-btn">[X]</button>
+      <h2>Search the haven...</h2>
+      
+      <input type="text" id="search-input" placeholder="type to search" />
+      <ul id="search-results" class="clean-list"></ul>
+      <!-- uls go here... -->
+    </div>
+  </dialog>
+
+  <h1>Reaper's Haven</h1>
+  <p>the collection of goods: websites, apps, guides, indexes...</p>
+
+  <!-- RECENT TUTORIALS SECTION -->
+  <h2 style="margin-top: 3rem;">Recent Tutorials</h2>
+  <ul class="clean-list">
+    {recentTutorials.map((tutorial) => (  
+      <li>
+        <a href={`/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
+        <span class="meta-tag">
+          {tutorial.data.date.toISOString().slice(0, 10)} 
+          [{tutorial.data.category.toUpperCase()}]
+        </span>
+      </li>
+    ))}
+  </ul>
+
+  <!-- GOODS SECTION -->
+  <h2 style="margin-top: 3rem;">The Goods Directory</h2>
+  <ul class="clean-list">
+    {sortedGoods.map((good) => (
+      <li>
+        <a href={`/goods/${good.id}`}>{good.data.title}</a>
+        <span class="meta-tag">- {good.data.description}</span>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>
+
+<style>
+  .clean-list {
+    list-style-type: none; 
+    padding: 0;
+    margin: 0;
+  }
+  .clean-list li {
+    margin-bottom: 12px;
+    padding-left: 15px;
+    border-left: 1px solid var(--text);
+  }
+  .meta-tag {
+    color: var(--text); 
+    font-size: 0.85em; 
+    opacity: 0.6;
+    margin-left: 10px;
+  }
+
+  /* SEARCH MODAL -------- */
+  #search-modal{
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    width: 80%;
+    max-width: 650px;
+    padding: 20px;
+    box-shadow: 0px 0px 20px rgba(96, 247, 129, 0.2);
+    position: relative;
+  }
+
+  #search-modal::backdrop {
+    background: rgba(10, 10, 15, 0.8);
+    backdrop-filter: blur(4px);
+  }
+
+  /*animation*/
+  @keyframes slideUpFade {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  #search-modal[open] {
+    animation-name: slideUpFade;
+    animation-duration: 0.3s;
+    animation:ease-out;
+  }
+
+  /* close btn */
+  .close-btn{
+    position: absolute;
+    top: 15px;
+    right: 15px;
+  }
+</style>
+
+
+<script define:vars={{search_list}}>
+  //function to form snippet for result found in content ==========================
+  function getSnippet(content, query){
+    var match_index = content.toLowerCase().indexOf(query.toLowerCase());
+    if (match_index === -1) {
+        return "";            
+    }
+
+    var begin_cut = Math.max(0, match_index - 40);
+    var end_cut = match_index+query.length + 40;
+    
+    //find start of a word, so i dont jst cut in the middle and get some sus results......
+    var real_begin = content.lastIndexOf(" ", begin_cut);
+    
+    //if at very top
+    if (real_begin === -1){
+        real_begin = 0;
+    }
+    //same for end
+    var real_end = content.indexOf(" ", end_cut);
+    
+    if (real_end === -1){
+        real_end = content.length;
+    }
+
+    var snippet = content.substring(real_begin, real_end);
+
+    //will look like this: ...i love cats...
+    return "..." + snippet + "...";
+  }
+  
+
+  var search_btn = document.querySelector('#open-search-btn');
+  var close_search_btn = document.querySelector('#close-search-btn') 
+  var search_modal = document.querySelector('#search-modal');
+  
+  var searcbox = document.querySelector('#search-input');
+
+  // ===============================================================================
+  // SEARCHBOX INPUT LISTENER
+  searcbox.addEventListener('input', (event) => {
+    //query is what user types in input
+    var query = event.target.value.toLowerCase();
+
+    //.filter() checks if search_list contains query:
+    //it can return both title and content
+    var filetered_results = search_list.filter((item)=> {
+        return item.title.toLowerCase().includes(query) 
+        || item.content.toLowerCase().includes(query);
+    });
+
+    //console.log(filetered_results);
+    //search-results is for <ul>, where soon will be found results 
+    // in forms of link + title OR also snippet for where found in content
+    var search_returns = document.querySelector('#search-results');
+    
+    search_returns.innerHTML = "";
+    
+    var formed_tags = "";
+    //loop through each element of results.
+    filetered_results.forEach(element => {
+        //make snippet string
+        var snippet_text = getSnippet(element.content, query);
+        if (snippet_text !== "") {
+          formed_tags += `
+          <li>
+              <a href="${element.url}">${element.title}</a>
+              <details style="margin-top: 5px; font-size: 0.9em; opacity: 0.8;">
+                  <summary style="cursor: pointer; color: var(--accent);">[+] Expand Context</summary>
+                  <p style="padding-left: 15px; border-left: 1px dashed var(--accent); margin-top: 5px;">
+                      ${snippet_text}
+                  </p>
+              </details>
+          </li>`               
+        }
+        else{ //no snippet, only link and title
+            formed_tags += `<li><a href="${element.url}">${element.title}</a></li>`
+        }
+      });
+
+    search_returns.innerHTML = formed_tags;
+  });
+
+  // ===============================================================================
+  // BTN CLICK LISTENERS
+  search_btn?.addEventListener('click', (event) => {
+    search_modal.showModal();
+  });
+
+  close_search_btn?.addEventListener('click', (event) => {
+    search_modal.close();
+  });
+  // ===============================================================================
+  // KEYDOWN LISTENER
+  document.addEventListener('keydown', (event) => {
+    //if CTRL+K => open modal and focus on searchbox
+    if(event.ctrlKey && event.key === 'k'){
+      event.preventDefault();
+      search_modal.showModal();
+      searcbox.focus();
+    }
+  });
+  
+  // ===============================================================================
+
+</script>

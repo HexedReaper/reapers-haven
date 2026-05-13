@@ -1,0 +1,74 @@
+---
+const { title } = Astro.props;
+---
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} | Reaper's Haven</title>
+
+    <style is:global>
+        :root{
+            --bg: rgb(28, 29, 47);
+            --text: rgb(192, 251, 226);
+            --accent: rgb(96, 247, 129);
+        }
+
+        body{
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            max-width: 800px;
+            margin: 40px auto;
+            padding:  0 20px;
+            line-height: 1.6;
+        }
+
+        a{
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover{
+            text-decoration: underline;
+        }
+
+        hr{
+            border: 0;
+            border-top: 1px solid var(--text);
+        }
+
+        input[type="text"]{
+            background: transparent;
+            color: var(--text);
+            padding: 8px 14px;
+            outline: none;
+            border: 1px solid var(--text);
+
+        }
+        input[type="text"]:focus{
+            border: 1px solid var(--accent);
+        }
+
+        button{
+            background: transparent;
+            color: var(--accent);
+            border: none;
+            cursor: pointer;            
+        }
+        button:hover{
+            text-decoration: underline;
+        }
+    </style>
+
+</head>
+<body>
+    <nav>
+        <a href="/">[home]</a>
+        <hr />
+    </nav>
+    <slot />
+    
+</body>
+</html>

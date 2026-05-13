@@ -1,0 +1,29 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+    const entries = await getCollection('tutorials');
+    
+    //let TS implicitly type 'entry'
+    return entries.map((entry) => ({
+        params: { slug: entry.id }, 
+        props: { entry },
+    }));
+}
+
+interface Props {
+  entry: CollectionEntry<'tutorials'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<BaseLayout title={entry.data.title}>
+  <h1>{entry.data.title}</h1>
+  <p><em>Published on: {entry.data.date.toDateString()}</em></p>
+  <hr />
+  <Content />
+</BaseLayout>

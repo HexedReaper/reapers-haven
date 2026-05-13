@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+
+const allTutorials = await getCollection('tutorials');
+const sortedTutorials = allTutorials.sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const groupedTutorials = sortedTutorials.reduce((acc, tutorial) => {
+  const category = tutorial.data.category || 'misc';
+  if (!acc[category]) acc[category] = [];
+  acc[category].push(tutorial);
+  return acc;
+}, {} as Record<string, CollectionEntry<'tutorials'>[]>);
+---
+
+<BaseLayout title="All Tutorials">
+  <h1>All Tutorials</h1>
+  <p>The complete archive of my guides.</p>
+  <hr />
+
+  {Object.entries(groupedTutorials).map(([category, tutorials]) => (
+    <div style="margin-bottom: 2rem;">
+      <h3 style="color: var(--accent);">[{category.toUpperCase()}]</h3>
+      <ul style="list-style-type: square; padding-left: 20px;">
+        {(tutorials as CollectionEntry<'tutorials'>[]).map((tutorial) => (
+          <li style="margin-bottom: 5px;">
+            <a href={`/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</BaseLayout>
