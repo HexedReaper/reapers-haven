@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+const base = import.meta.env.BASE_URL;
 
 //fetch and sorttutorials (by date)
 const allTutorials = await getCollection('tutorials');
@@ -18,15 +19,16 @@ const combined_items = [...allGoods, ...allTutorials];
 const search_list = combined_items.map((item)=> {
     return {
         title: item.data.title,
-        url: `/${item.collection}/${item.id}`,
+        url: `${base}/${item.collection}/${item.id}`,
         content: item.body
 }})
+
 ---
 
 <BaseLayout title="Home">
   <div style="display: flex; gap: 15px; font-weight: bold; margin-bottom: 1rem;">
-    <a href="/tutorials">[ALL TUTORIALS]</a>
-    <a href="/goods">[ALL GOODS]</a>
+    <a href={`${base}/tutorials`}>[ALL TUTORIALS]</a>
+    <a href={`${base}/goods`}>[ALL GOODS]</a>
   
     <!-- search stuff -->
     <button id="open-search-btn">[SEARCH]</button>
@@ -52,7 +54,7 @@ const search_list = combined_items.map((item)=> {
   <ul class="clean-list">
     {recentTutorials.map((tutorial) => (  
       <li>
-        <a href={`/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
+        <a href={`${base}/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
         <span class="meta-tag">
           {tutorial.data.date.toISOString().slice(0, 10)} 
           [{tutorial.data.category.toUpperCase()}]
@@ -66,7 +68,7 @@ const search_list = combined_items.map((item)=> {
   <ul class="clean-list">
     {sortedGoods.map((good) => (
       <li>
-        <a href={`/goods/${good.id}`}>{good.data.title}</a>
+        <a href={`${base}/goods/${good.id}`}>{good.data.title}</a>
         <span class="meta-tag">- {good.data.description}</span>
       </li>
     ))}
