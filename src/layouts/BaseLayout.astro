@@ -61,6 +61,44 @@ const base = import.meta.env.BASE_URL;
         button:hover{
             text-decoration: underline;
         }
+
+        /* img base style*/
+        img {
+            max-width: 100%;
+            border-radius: 15px;
+            height: auto;
+            display: block;
+            margin: 2rem 0;
+            opacity: 0.85;
+            filter: drop-shadow(0 0 2px rgba(192, 251, 226, 0.15));
+            transition: all 0.3s ease;
+        }
+
+        /* img desktop hover*/
+        @media (hover: hover) and (pointer: fine) {
+            img:hover {
+                opacity: 1;
+                filter: drop-shadow(0 0 15px rgba(96, 247, 129, 0.4));
+                transform: translateY(-2px);
+            }
+        }
+
+        /* phones */
+        @media (max-width: 600px) {
+            img {
+                margin: 1.5rem 0;
+                border-radius: 10px;
+                opacity: 0.95;
+            }
+            
+            img:active {
+                opacity: 1;
+                filter: drop-shadow(0 0 10px rgba(96, 247, 129, 0.5));
+                transform: scale(0.98); 
+            }
+
+        }
+
     </style>
 
 </head>
