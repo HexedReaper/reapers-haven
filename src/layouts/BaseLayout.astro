@@ -62,6 +62,182 @@ const base = import.meta.env.BASE_URL;
             text-decoration: underline;
         }
 
+        /* TEXT SELECTION COLORS */
+        ::selection {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        /* firefox */
+        ::-moz-selection {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        blockquote {
+            margin: 1.5rem 0 1.5rem 1rem;
+            padding-left: 1.5rem;
+            position: relative;
+            border-left: 1px dotted rgba(192, 251, 226, 0.3);
+        }
+
+        blockquote::before {
+            content: ">";
+            position: absolute;
+            left: -8px;
+            top: 0;
+            color: var(--accent);
+            font-weight: bold;
+            background: var(--bg);
+            padding: 0 4px;
+        }
+
+        blockquote p {
+            margin: 0;
+            color: rgba(192, 251, 226, 0.85);
+        }
+
+
+        /*Ordered Lists*/
+        ol {
+            list-style-type: upper-roman;
+            padding-left: 2.5rem;
+            margin: 1.5rem 0;
+        }
+
+        /* Unordered Lists */
+        ul {
+            list-style-type: "> ";
+            padding-left: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        /* Nested Unordered Lists */
+        li ul {
+            list-style-type: "- ";
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* List Item */
+        li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        /* markers */
+        li::marker {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+
+        /* INLINE CODE */
+        p code, li code {
+            background: rgba(192, 251, 226, 0.08);
+            color: var(--text);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 0.2em 0.4em;
+            border-radius: 0;
+            font-size: 0.9em;
+            border: 1px solid rgba(192, 251, 226, 0.15);
+        }
+
+        /* BIG CODE BLOCKS*/
+        pre {
+            background-color: rgba(28, 29, 47, 0.6) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 3rem 1.5rem 1.5rem 1.5rem !important;
+            margin: 2rem 0;
+            border-radius: 0;
+            border: 1px solid rgba(192, 251, 226, 0.15);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow-x: auto;
+        }
+
+        /*HEADER BAR */
+        pre::before {
+            content: attr(data-language); 
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2rem;
+            background: rgba(0, 0, 0, 0.4);
+            color: rgba(192, 251, 226, 0.5);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(192, 251, 226, 0.1);
+        }
+
+        /* LINE NUMBERS */
+        pre > code {
+            counter-reset: line;
+        }
+
+        pre > code .line {
+            counter-increment: line;
+        }
+
+        pre > code .line::before {
+            content: counter(line);
+            display: inline-block;
+            width: 1.5rem;
+            margin-right: 1.5rem;
+            text-align: right;
+            color: rgba(192, 251, 226, 0.25);
+            border-right: 1px solid rgba(192, 251, 226, 0.1);
+            padding-right: 0.8rem;
+            font-size: 0.85em;
+            user-select: none; /* prevents from copying line nums */
+        }
+
+        /* COPY BUTTON STYLES */
+        .copy-btn {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.5rem;
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid rgba(96, 247, 129, 0.3);
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .copy-btn:hover {
+            background: rgba(96, 247, 129, 0.1);
+            border-color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* CUSTOM SCROLLBAR */
+        pre::-webkit-scrollbar {
+            height: 8px;
+        }
+        pre::-webkit-scrollbar-track {
+            background: rgba(28, 29, 47, 0.3);
+        }
+        pre::-webkit-scrollbar-thumb {
+            background: rgba(192, 251, 226, 0.2);
+            border: 1px solid rgba(192, 251, 226, 0.1);
+        }
+        pre::-webkit-scrollbar-thumb:hover {
+            background: rgba(192, 251, 226, 0.4);
+        }
+
         /* img base style*/
         img {
             max-width: 100%;
@@ -110,4 +286,47 @@ const base = import.meta.env.BASE_URL;
     <slot />
     
 </body>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const codeBlocks = document.querySelectorAll('pre'); //codeblock is with pre tag.
+
+    codeBlocks.forEach((block) => {
+      // Create button
+      const button = document.createElement('button');
+      button.className = 'copy-btn';
+      button.innerText = 'COPY';
+
+      // add it to <pre> block
+      block.appendChild(button);
+
+      //click event
+      button.addEventListener('click', async () => {
+        const code = block.querySelector('code')?.innerText || '';
+        
+        try {
+          //write to clipbord
+          await navigator.clipboard.writeText(code);
+          
+          //visual feedback
+          button.innerText = 'COPIED!';
+          button.style.background = 'var(--accent)';
+          button.style.color = 'var(--bg)';
+
+          //then reset 2 secs later
+          setTimeout(() => {
+            button.innerText = 'COPY';
+            button.style.background = 'transparent';
+            button.style.color = 'var(--accent)';
+          }, 2000);
+        } 
+        catch (err) {
+          console.error('Failed to copy text: ', err);
+          button.innerText = 'ERROR';
+        }
+      });
+    });
+  });
+</script>
+
 </html>
