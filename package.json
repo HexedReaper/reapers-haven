@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "astro build && gh-pages -d dist -b pages -u \"codeberg-bot <noreply@codeberg.org>\""
+    "deploy": "astro build && GIT_SSH_COMMAND='ssh -4' gh-pages -d dist -b pages -u 'codeberg-bot <noreply@codeberg.org>'"
   },
   "dependencies": {
     "astro": "^6.2.1",
