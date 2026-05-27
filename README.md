@@ -3,7 +3,10 @@
 ## Website:
 https://lordacid.codeberg.page/reapers-haven
 
-## Issues
+## Contribute
+So you have some new cool website to add, awesome idea for collection, or you want to write a whole new tutorial? Or maybe you just see something that can be improved, fixed, deleted, updated? That is amazing! Contributions are always welcome.
+
+### Issues
 There is an issue reporter system, implemented right on the website. It is manual, nothing is being "tracked" automatically. 
 How issue tracker works? You select text, and you can press the little button `[!]`. It will open reporter menu. Now, you can choose the type of issue to report, and also send some details. That information will be sent to cloudflare worker, which then will create an issue on this codeberg repo using my account and `issues read and write permission`. 
 
@@ -15,10 +18,16 @@ It will use provided information:
 
 If you wish to disable reporter button, you can use the new global toggle button in the website's navigation bar.
 
-## How to contribute:
-So you have some new cool website to add, awesome idea for collection, or you want to write a whole new tutorial? Or maybe you just see something that can be improved? That is amazing! Contributions are always welcome.
+### BIGGER IMPROVEMENTS
 
-Here is how can do this:
+#### Requirements
+To run this thing locally or build it, you just need a few basic tools installed on your machine:
+- Node.js (v18 or higher recommended)
+- pnpm (package manager used for handling dependencies and deployment scripts)
+
+If you have those, just run `pnpm install` in the root directory to grab all needed packages like Astro and Sharp, and you are ready to go.
+
+#### How to contribute step by step
 1. Fork the repository
 Go to Codeberg and press that fork button. This will create a copy of the repo under your own account so you can play with code safely.
 
