@@ -104,3 +104,234 @@ document.addEventListener('keydown', (event) => {
 });
 
 // ===============================================================================
+// issue reporter
+// ===============================================================================
+let currentTrigger = null;
+let currentPanel = null;
+
+//caching variables to preserve values when focus is dropped or changed
+let cachedSelectedText = "";
+let cachedContext = "";
+
+const clearReportingUI = () => {
+  if (currentTrigger) { currentTrigger.remove(); currentTrigger = null; }
+  if (currentPanel) { currentPanel.remove(); currentPanel = null; }
+};
+
+const handleSelectionEnd = (event) => {
+  const target = event.target;
+  const isTouch = event.type === 'touchend';
+
+  //exit instantly if the user disabled reporting
+  if (localStorage.getItem('telemetry_disabled') === 'true') return;
+
+  // 10ms delay allows mobile OS to finish native text highlighting before read it
+  setTimeout(() => {
+    //ignore clicks inside panel so don't recalculate or drop layout nodes
+    if (currentPanel && currentPanel.contains(target)) return;
+    if (currentTrigger && currentTrigger.contains(target)) return;
+
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+
+    //clean up if selection is cleared or out of limits
+    if (!selectedText || selectedText.length <= 1 || selectedText.length > 250) {
+      clearReportingUI();
+      return;
+    }
+
+    if (currentTrigger || currentPanel) return;
+
+    //cache string payload parameters immediately to prevent input focus data loss
+    cachedSelectedText = selectedText;
+    cachedContext = (selection.anchorNode?.parentElement?.innerText || '').substring(0, 300);
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    //1. Render trigger indicator [!]
+    const trigger = document.createElement('button');
+    trigger.className = 'typo-indicator-trigger';
+    trigger.innerText = '[!]';
+    
+    let triggerLeft = rect.left + window.scrollX + (rect.width / 2) - 15;
+    
+    // Push below text on mobile so it avoids Android's native Copy/Share menu
+    let triggerTop = isTouch ? (rect.bottom + window.scrollY + 15) : (rect.top + window.scrollY - 32);
+    
+    if (!isTouch && (rect.top - 32 < 0)) {
+      triggerTop = rect.bottom + window.scrollY + 10; //flip below if clipping top screen
+    }
+
+    trigger.style.left = `${triggerLeft}px`;
+    trigger.style.top = `${triggerTop}px`;
+
+    document.body.appendChild(trigger);
+    currentTrigger = trigger;
+
+    //2. Expand panel interface (Using touchstart for immediate execution on mobile viewports)
+    const executeExpansion = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      trigger.remove();
+      currentTrigger = null;
+
+      const panel = document.createElement('div');
+      panel.className = 'typo-reporter-panel';
+
+      const panelWidth = 280;
+      const paddingOffset = 10;
+      
+      let targetLeft = rect.left + window.scrollX + (rect.width / 2) - (panelWidth / 2);
+      
+      //check horizontal edge collisions
+      if (targetLeft + panelWidth > window.innerWidth + window.scrollX - paddingOffset) {
+        targetLeft = window.innerWidth + window.scrollX - panelWidth - paddingOffset;
+      }
+      if (targetLeft < window.scrollX + paddingOffset) {
+        targetLeft = window.scrollX + paddingOffset;
+      }
+
+      const panelEstimatedHeight = 195;
+      let targetTop = rect.top + window.scrollY - panelEstimatedHeight;
+
+      if (rect.top - panelEstimatedHeight < 0) {
+        targetTop = rect.bottom + window.scrollY + 12;
+        panel.style.borderTop = '1px solid var(--border-glass)';
+        panel.style.borderBottom = '3px solid var(--accent-alt)';
+      }
+
+      panel.style.left = `${targetLeft}px`;
+      panel.style.top = `${targetTop}px`;
+
+      panel.innerHTML = `
+        <div class="typo-action-row">
+            <button class="typo-flag-btn active" data-type="typo">Typo</button>
+            <button class="typo-flag-btn" data-type="error">Bug</button>
+            <button class="typo-flag-btn" data-type="update">Outdated</button>
+        </div>
+        <textarea id="telemetry-note" rows="3" placeholder="Some details (Optional)"></textarea>
+        <button class="typo-submit-btn">Send!</button>
+      `;
+
+      document.body.appendChild(panel);
+      currentPanel = panel;
+
+      let selectedType = 'typo';
+      const flagButtons = panel.querySelectorAll('.typo-flag-btn');
+      const noteArea = panel.querySelector('#telemetry-note');
+      const submitBtn = panel.querySelector('.typo-submit-btn');
+
+      // Prevent mobile touch gestures from collapsing the input canvas window
+      noteArea.addEventListener('mouseup', (noteEvent) => noteEvent.stopPropagation());
+      noteArea.addEventListener('touchend', (noteEvent) => noteEvent.stopPropagation());
+
+      flagButtons.forEach(btn => {
+        const handleBtnSelect = (optEvent) => {
+          optEvent.stopPropagation();
+          optEvent.preventDefault();
+          flagButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedType = btn.getAttribute('data-type');
+        };
+        btn.addEventListener('click', handleBtnSelect);
+        btn.addEventListener('touchstart', handleBtnSelect);
+      });
+
+      const handleFormSubmit = (submitEvent) => {
+        submitEvent.stopPropagation();
+        submitEvent.preventDefault();
+        
+        submitBtn.innerText = 'sending...';
+        submitBtn.disabled = true;
+
+        fetch("https://reapers-haven-typo-proxy.kranych.workers.dev/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: cachedSelectedText,
+            context: cachedContext,
+            url: window.location.href,
+            type: selectedType,
+            note: noteArea.value || ''
+          })
+        })
+        .then(res => {
+          if (res.ok) {
+            submitBtn.innerText = 'LOGGED OK.';
+            setTimeout(clearReportingUI, 1000);
+          } else {
+            submitBtn.innerText = 'ERR: REFUSAL';
+            setTimeout(clearReportingUI, 2000);
+          }
+        })
+        .catch(() => {
+          submitBtn.innerText = 'ERR: TIMEOUT';
+          setTimeout(clearReportingUI, 2000);
+        });
+
+        const globalSelection = window.getSelection();
+        globalSelection.removeAllRanges();
+      };
+
+      submitBtn.addEventListener('click', handleFormSubmit);
+      submitBtn.addEventListener('touchstart', handleFormSubmit);
+    };
+
+    // Fast mobile touch binding + standard desktop cursor fallback
+    trigger.addEventListener('touchstart', executeExpansion);
+    trigger.addEventListener('click', executeExpansion);
+  }, 10);
+};
+
+// Bind for both PC (mouse) and Mobile (touch)
+document.addEventListener('mouseup', handleSelectionEnd);
+document.addEventListener('touchend', handleSelectionEnd);
+
+//mobile viewport selection listener adjustments
+document.addEventListener('selectionchange', () => {
+  if (localStorage.getItem('telemetry_disabled') === 'true') return;
+  const selection = window.getSelection();
+  const text = selection.toString().trim();
+  
+  //do not clear components if user typing inside the box
+  if (document.activeElement && (document.activeElement.id === 'telemetry-note')) return;
+
+  if (!text && !currentPanel) {
+    clearReportingUI();
+  }
+});
+
+
+// ===============================================================================
+// ISSUE REPORTING TOGGLE
+// ===============================================================================
+const toggleBtn = document.querySelector('#toggle-telemetry-btn');
+
+if (toggleBtn) {
+  //sync button view layout with saved local preference state on boot
+  if (localStorage.getItem('telemetry_disabled') === 'true') {
+    toggleBtn.innerText = '[ISSUE REPORT: OFF]';
+    toggleBtn.classList.add('disabled');
+  }
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    
+    const isDisabled = localStorage.getItem('telemetry_disabled') === 'true';
+    
+    if (isDisabled) {
+      //re-enable state
+      localStorage.removeItem('telemetry_disabled');
+      toggleBtn.innerText = '[ISSUE REPORT: ON]';
+      toggleBtn.classList.remove('disabled');
+    } else {
+      //disabling state: save state and scrub active UI artifacts off-screen
+      localStorage.setItem('telemetry_disabled', 'true');
+      toggleBtn.innerText = '[ISSUE REPORT: OFF]';
+      toggleBtn.classList.add('disabled');
+      clearReportingUI();
+    }
+  });
+}
