@@ -112,6 +112,13 @@ function formatCommitLogs(changes) {
 
     //checks name matching, URL destination paths, or string text similarity
     const matchIndex = removed.findIndex((removedItem, idx) => {
+      //early return if already processed or from a different collection
+      if (processedIndices.has(idx) || removedItem.collection !== addedItem.collection) return false;
+
+      //extract details before doing any length comparisons
+      const removedName = extractSiteName(removedItem.content);
+      const removedUrl = extractSiteUrl(removedItem.content);
+
       const lenDiff = Math.abs(removedName.length - itemName.length);
       
       //only calculate typo distance if strings are relatively similar in length,
@@ -119,11 +126,6 @@ function formatCommitLogs(changes) {
       if (lenDiff <= 3 && removedName.length > 4 && itemName.length > 4 && itemName.length < 100) {
         if (calculateLevenshtein(removedName, itemName) <= 3) return true;
       }
-
-      if (processedIndices.has(idx) || removedItem.collection !== addedItem.collection) return false;
-
-      const removedName = extractSiteName(removedItem.content);
-      const removedUrl = extractSiteUrl(removedItem.content);
 
       //strict label name equivalence
       if (removedName === itemName && itemName !== "") return true;
