@@ -1,6 +1,7 @@
 //grab list directly from HTML element's data attribute
 const search_modal = document.querySelector('#search-modal');
 const search_list = JSON.parse(search_modal?.dataset.searchlist || '[]');
+const searchPayloadNode = document.querySelector('#search-data-payload');
 
 //function to form snippet for result found in content ==========================
 function getSnippet(content, query){
@@ -61,26 +62,43 @@ searcbox?.addEventListener('input', (event) => {
   var formed_tags = "";
   //loop through each element of results.
   filetered_results.forEach(element => {
-      //make snippet string
-      var snippet_text = getSnippet(element.content, query);
-      if (snippet_text !== "") {
-        formed_tags += `
-        <li>
-            <a href="${element.url}">${element.title}</a>
-            <details style="margin-top: 5px; font-size: 0.9em; opacity: 0.8;">
-                <summary style="cursor: pointer; color: var(--accent);">[+] Expand Context</summary>
-                <p style="padding-left: 15px; border-left: 1px dashed var(--accent); margin-top: 5px;">
-                    ${snippet_text}
-                </p>
-            </details>
-        </li>`               
-      }
-      else{ //no snippet, only link and title
-          formed_tags += `<li><a href="${element.url}">${element.title}</a></li>`
-      }
-    });
+    var snippet_text = getSnippet(element.content, query);
+    
+    const li = document.createElement('li');
+    const anchor = document.createElement('a');
+    
+    //safely assign text content and attributes
+    anchor.textContent = element.title;
+    
+    //security check: block 'javascript:' or 'data:' URI schemes
+    const secureUrl = (element.url.startsWith('http://') || element.url.startsWith('https://') || element.url.startsWith('/')) 
+      ? element.url 
+      : '#';
+    anchor.setAttribute('href', secureUrl);
+    li.appendChild(anchor);
 
-  search_returns.innerHTML = formed_tags;
+    if (snippet_text !== "") {
+      const details = document.createElement('details');
+      details.style.cssText = "margin-top: 5px; font-size: 0.9em; opacity: 0.8;";
+      
+      const summary = document.createElement('summary');
+      summary.style.cssText = "cursor: pointer; color: var(--accent);";
+      summary.textContent = "[+] Expand Context";
+      
+      const p = document.createElement('p');
+      p.style.cssText = "padding-left: 15px; border-left: 1px dashed var(--accent); margin-top: 5px;";
+      
+      //using textContent guarantees that HTML entities aren't parsed as active nodes
+      p.textContent = snippet_text; 
+      
+      details.appendChild(summary);
+      details.appendChild(p);
+      li.appendChild(details);
+    }
+    
+    search_returns.appendChild(li);
+  });
+
 });
 
 // ===============================================================================
@@ -127,6 +145,11 @@ const handleSelectionEnd = (event) => {
 
   // 10ms delay allows mobile OS to finish native text highlighting before read it
   setTimeout(() => {
+    const activeTag = document.activeElement?.tagName?.toLowerCase();
+    if (activeTag === 'input' || activeTag === 'textarea') {
+      clearReportingUI();
+      return;
+    }
     //ignore clicks inside panel so don't recalculate or drop layout nodes
     if (currentPanel && currentPanel.contains(target)) return;
     if (currentTrigger && currentTrigger.contains(target)) return;
@@ -144,9 +167,9 @@ const handleSelectionEnd = (event) => {
 
     //cache string payload parameters immediately to prevent input focus data loss
     cachedSelectedText = selectedText;
-    cachedContext = (selection.anchorNode?.parentElement?.innerText || '').substring(0, 300);
 
     const range = selection.getRangeAt(0);
+    cachedContext = (range.commonAncestorContainer.textContent || '').substring(0, 300);
     const rect = range.getBoundingClientRect();
 
     //1. Render trigger indicator [!]
@@ -229,6 +252,7 @@ const handleSelectionEnd = (event) => {
 
       flagButtons.forEach(btn => {
         const handleBtnSelect = (optEvent) => {
+          optEvent.preventDefault(); //prevents the subsequent click event on mobile
           optEvent.stopPropagation();
           optEvent.preventDefault();
           flagButtons.forEach(b => b.classList.remove('active'));
