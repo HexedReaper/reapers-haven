@@ -1,0 +1,146 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getGoodsHistory } from '../../scripts/goods-tracker.js';
+import kaomojiData from '../../data/kaomojis.json';
+import '../../styles/updates.css';
+
+const historyData = getGoodsHistory();
+const base = import.meta.env.BASE_URL || '';
+
+//group logs under each date block by their collectionName
+const groupedHistoryData = historyData.map((block) => {
+  const collections: Record<string, any[]> = {};
+
+  block.logs.forEach((item) => {
+    const isObject = typeof item === 'object' && item !== null;
+    const collectionName = isObject ? item.collectionName : 'unknown';
+
+    if (!collections[collectionName]) {
+      collections[collectionName] = [];
+    }
+    collections[collectionName].push(item);
+  });
+
+  return {
+    date: block.date,
+    collections
+  };
+});
+
+//helper utility to draw random entries safely
+function getKaomoji(category: 'active' | 'error' | 'neutral' | 'action'): string {
+  const collection = kaomojiData[category];
+  return collection[Math.floor(Math.random() * collection.length)];
+}
+
+function slugify(text: string) {
+  if (!text) return 'section';
+  const slug = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+    
+  return slug || 'section'; //fallback if regex strips everything
+}
+
+function formatHumanDate(dateString: string) {
+  if (!dateString) return '';
+  const parts = dateString.split('-');
+  if (parts.length !== 3) return dateString;
+
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthName = months[monthIdx] || '';
+
+  let suffix = 'th';
+  if (day === 1 || day === 21 || day === 31) suffix = 'st';
+  else if (day === 2 || day === 22) suffix = 'nd';
+  else if (day === 3 || day === 23) suffix = 'rd';
+
+  return `${monthName} ${day}${suffix}, ${year}`;
+}
+---
+
+<BaseLayout title="Goods Updates Tracker">
+  <main class="updates-container">
+    <div class="header-group">
+      <h2 class="timeline-header">/dev/log_analyzer</h2>
+      <span class="system-badge">{getKaomoji('active')} status: active</span>
+    </div>
+
+    {groupedHistoryData.length === 0 ? (
+      <p class="empty-history">{getKaomoji('error')} No history records found.</p>
+    ) : (
+      groupedHistoryData.map((block) => (
+        <details open class="update-accordion">
+          <summary class="date-sticky-banner">
+            <span class="banner-folder">◆ goods/</span>
+            <h3 class="block-date">[{formatHumanDate(block.date)}]</h3>
+            <span class="toggle-icon">{getKaomoji('neutral')} [click to toggle]</span>
+          </summary>
+          
+          <div class="history-block-content">
+            {Object.entries(block.collections).map(([collectionName, logs]) => (
+              <details open class="collection-accordion">
+                <summary class="collection-header">
+                  <span class="collection-marker">≡</span> 
+                  <span class="collection-name-text">{collectionName}.md</span>
+                  <span class="collection-toggle">/* click to flip */</span>
+                </summary>
+                
+                <div class="log-list">
+                  {logs.map((item) => {
+                    const isObject = typeof item === 'object' && item !== null;
+                    const action = isObject ? item.action : 'updated';
+                    const name = isObject ? item.name : 'Item';
+                    const type = isObject ? item.type : 'site';
+                    const sectionTitle = isObject ? item.sectionTitle : 'Global';
+                    const fallbackMessage = isObject ? item.message : String(item);
+
+                    const targetUrl = `${base}/goods/${collectionName}/#${slugify(sectionTitle)}`;
+                    const actionBracket = action === 'added' ? '[ + ]' : action === 'removed' ? '[ - ]' : '[ * ]';
+                    
+                    return (
+                      <div class="log-card">
+                        {isObject ? (
+                          <div class="log-grid">
+                            <div class="meta-row">
+                              <span class={`status-tag tag-${action}`}>{actionBracket} {action.toUpperCase()}</span>
+                              <span class={`type-tag tag-${type}`}>{type}</span>
+                              <span class="entity-name">{name}</span>
+                            </div>
+                            
+                            <div class="context-row">
+                              <div class="token-group">
+                                <span class="path-label">sec:</span>
+                                <span class="path-token section-token">#{sectionTitle}</span>
+                              </div>
+                              
+                              <a href={targetUrl} class="context-link">
+                                {getKaomoji('action')} [view_target]
+                              </a>
+                            </div>
+                          </div>
+                        ) : (
+                          <div class="fallback-row">
+                            <span class="log-pointer">»</span>
+                            <span class="log-text">{fallbackMessage}</span>
+                            <a href={targetUrl} class="context-link">{getKaomoji('action')} [view_target]</a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
+            ))}
+          </div>
+        </details>
+      ))
+    )}
+  </main>
+</BaseLayout>

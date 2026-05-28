@@ -10,6 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "track-goods": "node src/scripts/goods-tracker.js",
     "deploy": "astro build && GIT_SSH_COMMAND='ssh -4' gh-pages -d dist -b pages -u 'codeberg-bot <noreply@codeberg.org>'"
   },
   "dependencies": {
