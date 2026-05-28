@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
-const base = import.meta.env.BASE_URL;
+const base = import.meta.env.BASE_URL || '';
 
 const allTutorials = await getCollection('tutorials');
 const sortedTutorials = allTutorials.sort((a, b) => a.data.title.localeCompare(b.data.title));

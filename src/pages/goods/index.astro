@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
-const base = import.meta.env.BASE_URL;
+const base = import.meta.env.BASE_URL || '';
 
 const allGoods = await getCollection('goods');
 const sortedGoods = allGoods.sort((a, b) => a.data.title.localeCompare(b.data.title));
