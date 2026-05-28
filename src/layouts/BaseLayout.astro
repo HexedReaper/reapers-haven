@@ -1,10 +1,10 @@
 ---
 import { getCollection } from 'astro:content';
 import '../styles/global.css';
+import kaomojiData from '../data/kaomojis.json';
 
 const { title } = Astro.props;
-const base = import.meta.env.BASE_URL;
-
+const base = import.meta.env.BASE_URL || '';
 //fetch and map everything for search script to read
 const allTutorials = await getCollection('tutorials');
 const allGoods = await getCollection('goods');
@@ -16,6 +16,14 @@ const search_list = combined_items.map((item)=> {
         url: `${base}/${item.collection}/${item.id}`,
         content: item.body
 }})
+
+function getRandomKaomoji(category) {
+  const list = kaomojiData[category];
+  if (!list || list.length === 0) return '•_•';
+  const randomIndex = Math.floor(Math.random() * list.length);
+  return list[randomIndex];
+}
+
 ---
 <html lang="en">
 <head>
@@ -29,8 +37,12 @@ const search_list = combined_items.map((item)=> {
         <a href=`${base}/`>[home]</a>
         <a href={`${base}/tutorials`}>[ALL TUTORIALS]</a>
         <a href={`${base}/goods`}>[ALL GOODS]</a>
+
+        <a href={`${base}/goods/updates/`}>[ALL UPDATES]</a>
+
         <!-- search stuff -->
         <button id="open-search-btn">[SEARCH]</button>
+
         <button id="toggle-telemetry-btn" class="telemetry-toggle">
             [ISSUE REPORT: ON]
         </button>
@@ -38,7 +50,7 @@ const search_list = combined_items.map((item)=> {
     </nav>
 
     <!-- SEARCH MODAL  -->
-    <dialog id="search-modal" data-searchlist={JSON.stringify(search_list)}>
+    <dialog id="search-modal">
         <div class="modal-content">
         <button class="close-btn" id="close-search-btn">[X]</button>
         <h2>Search the haven...</h2>
@@ -47,6 +59,8 @@ const search_list = combined_items.map((item)=> {
         <ul id="search-results" class="clean-list"></ul>
         </div>
     </dialog>
+
+    <script id="search-data-payload" type="application/json" set:html={JSON.stringify(search_list)}></script>
 
     <slot />
     
@@ -58,39 +72,36 @@ const search_list = combined_items.map((item)=> {
         const codeBlocks = document.querySelectorAll('pre'); //codeblock is with pre tag.
 
         codeBlocks.forEach((block) => {
-        //create button
-        const button = document.createElement('button');
-        button.className = 'copy-btn';
-        button.innerText = 'COPY';
+            const button = document.createElement('button');
+            button.className = 'copy-btn';
+            button.innerText = 'COPY';
+            block.appendChild(button);
 
-        // add it to <pre> block
-        block.appendChild(button);
+            let resetTimeout; // Add timeout tracker
 
-        //click event
-        button.addEventListener('click', async () => {
-            const code = block.querySelector('code')?.innerText || '';
-            
-            try {
-            //write to clipbord
-            await navigator.clipboard.writeText(code);
-            
-            //visual feedback
-            button.innerText = 'COPIED!';
-            button.style.background = 'var(--accent)';
-            button.style.color = 'var(--bg)';
+            button.addEventListener('click', async () => {
+                const code = block.querySelector('code')?.innerText || '';
+                
+                try {
+                    await navigator.clipboard.writeText(code);
+                    button.innerText = 'COPIED!';
+                    button.style.background = 'var(--accent)';
+                    button.style.color = 'var(--bg)';
 
-            //then reset 2 secs later
-            setTimeout(() => {
-                button.innerText = 'COPY';
-                button.style.background = 'transparent';
-                button.style.color = 'var(--accent)';
-            }, 2000);
-            }
-            catch (err) {
-            console.error('Failed to copy text: ', err);
-            button.innerText = 'ERROR';
-            }
-        });
+                    // Clear any existing timeout to prevent state overlap
+                    clearTimeout(resetTimeout);
+
+                    resetTimeout = setTimeout(() => {
+                        button.innerText = 'COPY';
+                        button.style.background = 'transparent';
+                        button.style.color = 'var(--accent)';
+                    }, 2000);
+                }
+                catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    button.innerText = 'ERROR';
+                }
+            });
         });
     });
 </script>
