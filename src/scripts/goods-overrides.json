@@ -1,0 +1,24 @@
+{
+    "android:Discord (official is fine, but you can also use some mods to add new plugins / customisation, and disable telemetry)": {
+        "sectionTitle": "Discord Mods"
+    },
+    "android:Instagram (original sucks)": {
+        "sectionTitle": "Instagram"
+    },
+    "android:App stores (aside from google play store)": {
+        "sectionTitle": "App Stores"
+    },
+    "linux:Arch wiki": {
+        "name": "Arch Wiki (Main Documentation)"
+    },
+    "linux:man pages...": {
+        "name": "Linux Core Man Pages",
+        "sectionTitle": "Knowledge & Education"
+    },
+    "android:1.1.1.1": {
+        "name": "Cloudflare 1.1.1.1 (DNS/VPN)"
+    },
+    "linux:niri": {
+        "message": "Switched primary display setup to niri scrollable-tiling window manager"
+    }
+}

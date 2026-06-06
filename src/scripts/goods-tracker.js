@@ -1,5 +1,8 @@
 import { execSync } from 'child_process';
 import path from 'path';
+import fs from 'fs';
+
+const OVERRIDES_PATH = path.resolve('src/scripts/goods-overrides.json');
 
 export function getGoodsHistory() {
   try {
@@ -18,34 +21,76 @@ export function getGoodsHistory() {
     }
 
     const commits = logOutput.trim().split('\n')
-    .map(line => {
-      const [hash, timestamp] = line.split('|');
-      const parsedDate = new Date(parseInt(timestamp) * 1000);
-      return { hash, date: parsedDate };
-    })
-    //drop any commits where the date failed to parse
-    .filter(commit => !isNaN(commit.date.getTime()));
+      .map(line => {
+        const [hash, timestamp] = line.split('|');
+        const parsedDate = new Date(parseInt(timestamp) * 1000);
+        return { hash, date: parsedDate };
+      })
+      //drop any commits where the date failed to parse
+      .filter(commit => !isNaN(commit.date.getTime()));
 
     let historyLog = [];
 
     //process each commit block one by one (already ordered newest -> oldest by git log)
     commits.forEach(commit => {
       try {
-        // ^! safely gets the changes introduced by this specific commit
-        const diffOutput = execSync(`git diff ${commit.hash}^! -- src/content/goods/`, { encoding: 'utf8' });
-        
+        let diffOutput = '';
+        try {
+          //run diff strictly against its immediate parent commit version
+          diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash} -- src/content/goods/`, { encoding: 'utf8' });
+        } catch (parentErr) {
+          //fallback if the commit has no parents (e.g. commit containing new files)
+          const emptyTreeHash = '4b825dc642cb6eb9a0ea8e4eed6a8740dbe145e7';
+          diffOutput = execSync(`git diff ${emptyTreeHash} ${commit.hash} -- src/content/goods/`, { encoding: 'utf8' });
+        }
+
         if (diffOutput.trim()) {
           const formattedDate = commit.date.toISOString().split('T')[0];
           const logs = parseCommitDiff(diffOutput);
-          
+
           if (logs.length > 0) {
-            historyLog.push({ date: formattedDate, logs });
+            historyLog.push({
+              date: formattedDate,
+              logs: logs
+            });
           }
         }
       } catch (err) {
         console.warn(`Could not process diff for commit ${commit.hash}, skipping.`);
       }
     });
+    // --- APPLY PERSONAL OVERRIDES START ---
+    if (fs.existsSync(OVERRIDES_PATH)) {
+      try {
+        const overrides = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
+
+        historyLog.forEach(block => {
+          block.logs.forEach(item => {
+            if (typeof item === 'object' && item !== null) {
+              const itemLookupKey = `${item.collectionName}:${item.name}`;
+              const sectionLookupKey = `${item.collectionName}:${item.sectionTitle}`;
+
+              //check if the entire section has an override rule
+              if (overrides[sectionLookupKey]) {
+                const sectionFix = overrides[sectionLookupKey];
+                if (sectionFix.sectionTitle) item.sectionTitle = sectionFix.sectionTitle;
+              }
+
+              //apply individual item fixes if they exist
+              if (overrides[itemLookupKey]) {
+                const itemFix = overrides[itemLookupKey];
+                if (itemFix.sectionTitle) item.sectionTitle = itemFix.sectionTitle;
+                if (itemFix.name) item.name = itemFix.name;
+                if (itemFix.message) item.message = itemFix.message;
+              }
+            }
+          });
+        });
+      } catch (jsonErr) {
+        console.warn("Failed to parse goods-overrides.json:", jsonErr.message);
+      }
+    }
+    // ------
 
     return historyLog;
 
@@ -60,16 +105,16 @@ function parseCommitDiff(diffText) {
   let currentCollection = "";
   let currentSection = "Global";
   let fileLines = [];
-  
+
   for (let line of lines) {
-    if (line.startsWith('diff --git')) {
-      const match = line.match(/b\/src\/content\/goods\/(.+)\.md/);
-      currentCollection = match ? match[1] : "unknown";
+    if (line.startsWith('diff --git') || line.startsWith('--- ') || line.startsWith('+++ ')) {
+      const match = line.match(/[ab]\/src\/content\/goods\/(.+)\.md/);
+      currentCollection = match ? match[1] : currentCollection;
       currentSection = "Global";
       continue;
     }
 
-    if (line.startsWith(' ') || line.startsWith('+') || line.startsWith('-')) {
+    else if (line.startsWith(' ') || line.startsWith('+') || line.startsWith('-')) {
       const cleanLine = line.substring(1).trim();
       if (cleanLine.startsWith('#')) {
         currentSection = cleanLine.replace(/#+\s+/, '');
@@ -120,7 +165,7 @@ function formatCommitLogs(changes) {
       const removedUrl = extractSiteUrl(removedItem.content);
 
       const lenDiff = Math.abs(removedName.length - itemName.length);
-      
+
       //only calculate typo distance if strings are relatively similar in length,
       //are not massive paragraphs and are longer than 4 characters
       if (lenDiff <= 3 && removedName.length > 4 && itemName.length > 4 && itemName.length < 100) {
@@ -142,7 +187,7 @@ function formatCommitLogs(changes) {
     if (matchIndex !== -1) {
       processedIndices.add(matchIndex);
       actionType = "updated";
-      
+
       const oldItemName = extractSiteName(removed[matchIndex].content);
       const displayName = itemName !== oldItemName && oldItemName !== "" ? `${oldItemName} → ${itemName}` : itemName;
 
@@ -206,17 +251,17 @@ function formatCommitLogs(changes) {
 //helper checker to figure out if it's a URL link, a plugin, or a sub-list item
 function getItemType(content, section) {
   const clean = content.replace(/^[-*]\s+/, '').trim();
-  
+
   //if it's list entry under sections containing "plugin" or explicitly styled with **bold**
   if (section.toLowerCase().includes('plugin') || clean.startsWith('**')) {
     return 'plugin';
   }
-  
+
   //if it's ordered numbered instruction or doesn't have a markdown link [name](url)
   if (/^\d+\./.test(clean) || (!clean.startsWith('[') && (clean.includes(' - ') || clean.includes(' : ')))) {
     return 'list_entry';
   }
-  
+
   return 'site';
 }
 
@@ -224,25 +269,25 @@ function getItemType(content, section) {
 function isSubListBullet(markdownLine) {
   //normalize line by stripping out both leading hyphens, asterisks, and numbers
   const clean = markdownLine.replace(/^([-*]|\d+\.)\s+/, '').trim();
-  
+
   //if it's an item entry block (link, bold plugin name, or clean description title), pass it through
   if (clean.startsWith('[') || clean.startsWith('**') || clean.includes(' - ') || clean.includes(' : ') || clean.startsWith('http')) {
     return false;
   }
-  
+
   return true;
 }
 
 function extractSiteName(markdownLine) {
   //normalize line by stripping out both leading hyphens, asterisks, and numbers
   const clean = markdownLine.replace(/^([-*]|\d+\.)\s+/, '').trim();
-  
+
   //strip markdown bold tags if present
   const noBold = clean.replace(/\*\*/g, '');
-  
+
   const linkMatch = noBold.match(/^\[([^\]]+)\]/);
   if (linkMatch) return linkMatch[1];
-  
+
   return noBold.split(' - ')[0].split(' : ')[0].trim();
 }
 

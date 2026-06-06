@@ -14,9 +14,18 @@ body{
     color: var(--text);
     font-family: 'JetBrains Mono', monospace;
     max-width: 100rem;
-    margin: 40px auto;
+    margin: 20px auto;
     padding:  0 20px;
-    line-height: 1.6;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 600px) {
+    body {
+        font-size: 0.85rem;
+        margin: 12px auto;
+        padding: 0 12px;
+    }
 }
 
 hr{
@@ -205,7 +214,6 @@ pre {
     border: 1px solid var(--border-glass);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
     position: relative;
-    overflow-x: auto;
 }
 
 /*HEADER BAR */
@@ -231,6 +239,9 @@ pre::before {
 /* LINE NUMBERS */
 pre > code {
     counter-reset: line;
+    display: block;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
 }
 
 pre > code .line {
@@ -276,17 +287,17 @@ pre > code .line::before {
 }
 
 /* CUSTOM SCROLLBAR */
-pre::-webkit-scrollbar {
+pre > code::-webkit-scrollbar {
     height: 8px;
 }
-pre::-webkit-scrollbar-track {
+pre > code::-webkit-scrollbar-track {
     background: rgba(28, 29, 47, 0.3);
 }
-pre::-webkit-scrollbar-thumb {
+pre > code::-webkit-scrollbar-thumb {
     background: rgba(192, 251, 226, 0.2);
     border: 1px solid var(--border-glass);
 }
-pre::-webkit-scrollbar-thumb:hover {
+pre > code::-webkit-scrollbar-thumb:hover {
     background: rgba(192, 251, 226, 0.4);
 }
 
@@ -323,6 +334,27 @@ img {
         opacity: 1;
         filter: drop-shadow(0 0 10px rgba(96, 247, 129, 0.5));
         transform: scale(0.98); 
+    }
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+    .main-nav {
+        gap: 0.75rem;
+        justify-content: center;
+    }
+    
+    .main-nav a {
+        font-size: 0.85rem;
+        padding: 4px 6px;
     }
 }
 
@@ -435,40 +467,6 @@ img {
     animation-name: slideUpFade;
     animation-duration: 0.25s;
     animation-timing-function: ease-out;
-}
-
-/* PHONES: SEARCH MODAL */
-@media (max-width: 600px) {
-    #search-modal {
-        width: 95%;
-        padding: 1.5rem;
-    }
-
-    #search-modal h2 {
-        font-size: 1.2rem;
-        padding-right: 2.5rem;
-        margin-bottom: 1rem;
-    }
-
-    .close-btn {
-        top: 1.5rem;
-        right: 1.5rem;
-    }
-
-    #search-modal input[type="text"] {
-        padding: 10px 14px;
-        font-size: 0.95rem;
-        margin-bottom: 1rem;
-    }
-
-    #search-results {
-        max-height: 55vh;
-    }
-
-    #search-results li {
-        padding-left: 0.8rem;
-        margin-bottom: 1rem;
-    }
 }
 
 /* issue reporter*/
@@ -613,4 +611,64 @@ img {
 .telemetry-toggle.disabled {
     color: rgba(255, 99, 99, 0.5);
     border-color: rgba(255, 99, 99, 0.2);
+}
+
+/* PHONES: SEARCH MODAL */
+@media (max-width: 600px) {
+    h1 { font-size: 1.6rem; margin-top: 1.75rem; margin-bottom: 1rem; }
+    h2 { font-size: 1.3rem; margin-top: 2rem; margin-bottom: 1rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+
+    /* Code Block Spacing Compress */
+    pre {
+        padding: 2.5rem 1rem 1rem 1rem !important;
+        margin: 1.25rem 0;
+    }
+    pre::before {
+        height: 1.75rem;
+        font-size: 0.7rem;
+    }
+
+    /*fixed search modal */
+    #search-modal {
+        width: calc(100% - 24px) !important;
+        margin: 12px auto !important;
+        padding: 1.5rem 1.25rem 1.25rem 1.25rem !important;
+        box-sizing: border-box;
+    }
+
+    #search-modal h2 {
+        font-size: 1.15rem !important;
+        padding-right: 3rem;
+        margin-bottom: 1.25rem !important;
+        word-break: break-word;
+    }
+
+    .close-btn {
+        top: 1.5rem !important;
+        right: 1.25rem !important;
+        padding: 4px 6px;
+    }
+
+    #search-modal input[type="text"] {
+        padding: 12px 14px !important;
+        font-size: 0.95rem !important;
+        margin-bottom: 1rem !important;
+        border-radius: 0;
+    }
+
+    #search-results {
+        max-height: calc(100vh - 220px) !important;
+        padding-right: 2px;
+    }
+
+    #search-results li {
+        padding-left: 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    #search-results li a {
+        display: block;
+        word-break: break-all;
+    }
 }

@@ -42,12 +42,14 @@
 
 /* Date accordion reset rules */
 .date-sticky-banner::-webkit-details-marker,
-.collection-header::-webkit-details-marker {
+.collection-header::-webkit-details-marker,
+.section-summary-header::-webkit-details-marker {
   display: none;
 }
 
 .date-sticky-banner,
-.collection-header {
+.collection-header,
+.section-summary-header {
   list-style: none; /* Firefox fix */
   user-select: none;
   cursor: pointer;
@@ -86,7 +88,8 @@
 }
 
 .toggle-icon,
-.collection-toggle {
+.collection-toggle,
+.section-toggle {
   margin-left: auto;
   font-size: 0.7rem;
   color: var(--text-muted);
@@ -138,13 +141,65 @@
   opacity: 0.8;
 }
 
+/* Base structural layout for your section wrappers */
+.section-accordion-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0 0.5rem 0.25rem;
+}
+
+.section-accordion {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.25rem;
+}
+
+/* Styled section triggers matching the aesthetic */
+.section-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  margin-left: 12px;
+  transition: color 0.15s ease;
+}
+
+.section-summary-header:hover {
+  color: var(--accent-cyan);
+}
+
+.section-indicator {
+  color: var(--accent-cyan);
+  opacity: 0.7;
+  font-weight: bold;
+}
+
+.section-summary-title {
+  font-weight: bold;
+}
+
+.section-count-badge {
+  font-size: 0.7rem;
+  opacity: 0.4;
+}
+
+.section-accordion[open] .section-toggle {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+/* Original continuous line logic, nested beneath section blocks */
 .log-list {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding: 0.25rem 0 0.5rem 0.75rem;
+  padding: 0.75rem 0 0.75rem 0.75rem;
   border-left: 1px solid rgba(157, 126, 250, 0.15);
-  margin-left: 12px;
+  margin-left: 17px;
+  margin-top: 0.25rem;
 }
 
 .log-card {
@@ -297,12 +352,17 @@
   }
   
   .toggle-icon,
-  .collection-toggle {
+  .collection-toggle,
+  .section-toggle {
     display: none;
   }
 
+  .section-summary-header {
+    margin-left: 4px;
+  }
+
   .log-list {
-    margin-left: 5px;
+    margin-left: 9px;
     padding-left: 0.5rem;
   }
 
@@ -339,4 +399,19 @@
     border-top: 1px dashed var(--border-glass);
     text-align: left;
   }
+}
+
+.section-wrapper {
+  display: block;
+  width: 100%;
+}
+
+.global-list-override {
+  margin-top: -0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-accordion[open] .log-list {
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
 }
