@@ -18,12 +18,63 @@ interface Props {
 }
 
 const { entry } = Astro.props;
-const { Content } = await render(entry);
+const { Content, headings } = await render(entry);
+
+const allItems = await getCollection('tutorials');
+const base = import.meta.env.BASE_URL || '';
 ---
 
 <BaseLayout title={entry.data.title}>
-  <h1>{entry.data.title}</h1>
-  <p><em>Published on: {entry.data.date.toDateString()}</em></p>
-  <hr />
-  <Content />
+  <div class="sidebar-layout-wrapper" id="sidebar-layout">
+      
+      <aside class="sidebar left-sidebar">
+        <button class="expand-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('left-collapsed')" title="Expand Left Sidebar">GUIDES</button>
+        
+        <div class="sidebar-inner">
+          <div class="sidebar-header">
+            <h3 class="sidebar-title">/dev/Guides</h3> 
+            <button class="collapse-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('left-collapsed')" title="Collapse">[ &LeftTriangleBar; ]</button>
+          </div>
+          <ul class="tree-list">
+            {allItems.map(item => (
+              <li>
+                <a href={`${base}/goods/${item.id}`} class={item.id === entry.id ? 'active-link' : ''}>
+                  {item.data.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <h1>{entry.data.title}</h1>
+        <p style="opacity: 0.7;"><em>{entry.data.description}</em></p>
+        <hr />
+        <div class="goods-content">
+          <Content />
+        </div>
+      </main>
+
+      <aside class="sidebar right-sidebar">
+        <button class="expand-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('right-collapsed')" title="Expand Right Sidebar">INDEX</button>
+        
+        <div class="sidebar-inner">
+          <div class="sidebar-header">
+            <h3 class="sidebar-title">On this page</h3>
+            <button class="collapse-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('right-collapsed')" title="Collapse">[ &RightTriangleBar; ]</button>
+          </div>
+          <ul class="toc-list">
+            {headings.map(heading => (
+              <li class={`depth-${heading.depth}`}>
+                <a href={`#${heading.slug}`}>
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+    </div>
 </BaseLayout>

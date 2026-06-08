@@ -8,17 +8,19 @@ const sortedGoods = allGoods.sort((a, b) => a.data.title.localeCompare(b.data.ti
 ---
 
 <BaseLayout title="All Goods">
-  <h1>The Goods Archive</h1>
-  <p>Links, software, and other goods ;)</p>
-  <hr />
-  
-  <ul style="list-style-type: none; padding: 0;">
-    {sortedGoods.map((good) => (
-      <li style="margin-bottom: 15px; padding-left: 15px; border-left: 2px solid var(--accent);">
-        <a href={`${base}/goods/${good.id}`} style="font-size: 1.2em;">{good.data.title}</a>
-        <br />
-        <span style="font-size: 0.9em; opacity: 0.7;">{good.data.description}</span>
-      </li>
-    ))}
-  </ul>
+  <div class="index-content">
+    <h1>The Goods Archive</h1>
+    <p>Links, software, and other goods</p>
+    <hr />
+    
+    <ul>
+      {sortedGoods.map((good) => (
+        <li>
+          <a href={`${base}/goods/${good.id}`}>{good.data.title}</a>
+          <br />
+          <span>{good.data.description}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
 </BaseLayout>

@@ -15,53 +15,36 @@ const sortedGoods = allGoods.sort((a, b) => a.data.title.localeCompare(b.data.ti
 ---
 
 <BaseLayout title="Home">
-  <div style="display: flex; gap: 15px; font-weight: bold; margin-bottom: 1rem;">
+  <div class="index-content">
+    <div>
+    </div>
+    <h1>Reaper's Haven</h1>
+    <p>the collection of goods: websites, apps, guides, indexes...</p>
+    <p>I CANNOT GUARANTEE THAT THE CONTENT IS WORKING, ISN"T OUTDATED OR DOESN'T HAVE MISTAKES. USE AT YOUR OWN RISK, TRIPLE CHECK EVERYTHING. THIS WEBSITE IS SIMPLY ARCHIVE OF FOSS, OSS AND PROPERTARY SOFTWARE IN DIFFERENT FIELDS.</p>
+
+    <!-- RECENT TUTORIALS SECTION -->
+    <h2>Recent Tutorials</h2>
+    <ul class="clean-list">
+      {recentTutorials.map((tutorial) => (
+        <li>
+          <a href={`${base}/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
+          <span class="meta-tag">
+            {tutorial.data.date.toISOString().slice(0, 10)} 
+            [{tutorial.data.category.toUpperCase()}]
+          </span>
+        </li>
+      ))}
+    </ul>
+
+    <!-- GOODS SECTION -->
+    <h2>The Goods Directory</h2>
+    <ul class="clean-list">
+      {sortedGoods.map((good) => (
+        <li>
+          <a href={`${base}/goods/${good.id}`}>{good.data.title}</a>
+          <span class="meta-tag">- {good.data.description}</span>
+        </li>
+      ))}
+    </ul>
   </div>
-  <h1>Reaper's Haven</h1>
-  <p>the collection of goods: websites, apps, guides, indexes...</p>
-  <p> USE AT YOUR OWN RISK. THIS WEBSITE IS SIMPLY ARCHIVE OF FOSS, OSS, PROPERTARY SOFTWARE IN DIFFERENT FIELDS.</p>
-
-  <!-- RECENT TUTORIALS SECTION -->
-  <h2 style="margin-top: 3rem;">Recent Tutorials</h2>
-  <ul class="clean-list">
-    {recentTutorials.map((tutorial) => (  
-      <li>
-        <a href={`${base}/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
-        <span class="meta-tag">
-          {tutorial.data.date.toISOString().slice(0, 10)} 
-          [{tutorial.data.category.toUpperCase()}]
-        </span>
-      </li>
-    ))}
-  </ul>
-
-  <!-- GOODS SECTION -->
-  <h2 style="margin-top: 3rem;">The Goods Directory</h2>
-  <ul class="clean-list">
-    {sortedGoods.map((good) => (
-      <li>
-        <a href={`${base}/goods/${good.id}`}>{good.data.title}</a>
-        <span class="meta-tag">- {good.data.description}</span>
-      </li>
-    ))}
-  </ul>
 </BaseLayout>
-
-<style>
-  .clean-list {
-    list-style-type: none; 
-    padding: 0;
-    margin: 0;
-  }
-  .clean-list li {
-    margin-bottom: 12px;
-    padding-left: 15px;
-    border-left: 1px solid var(--text);
-  }
-  .meta-tag {
-    color: var(--text); 
-    font-size: 0.85em; 
-    opacity: 0.6;
-    margin-left: 10px;
-  }
-</style>

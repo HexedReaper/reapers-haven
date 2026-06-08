@@ -15,21 +15,23 @@ const groupedTutorials = sortedTutorials.reduce((acc, tutorial) => {
 }, {} as Record<string, CollectionEntry<'tutorials'>[]>);
 ---
 
-<BaseLayout title="All Tutorials">
-  <h1>All Tutorials</h1>
-  <p>The complete archive of my guides.</p>
-  <hr />
+<BaseLayout title="All Guides">
+  <div class="index-content">
+    <h1>All Guides</h1>
+    <p>The complete archive of my guides.</p>
+    <hr />
 
-  {Object.entries(groupedTutorials).map(([category, tutorials]) => (
-    <div style="margin-bottom: 2rem;">
-      <h3 style="color: var(--accent);">[{category.toUpperCase()}]</h3>
-      <ul style="list-style-type: square; padding-left: 20px;">
-        {(tutorials as CollectionEntry<'tutorials'>[]).map((tutorial) => (
-          <li style="margin-bottom: 5px;">
-            <a href={`${base}/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  ))}
+    {Object.entries(groupedTutorials).map(([category, tutorials]) => (
+      <div>
+        <h3>[{category.toUpperCase()}]</h3>
+        <ul>
+          {(tutorials as CollectionEntry<'tutorials'>[]).map((tutorial) => (
+            <li>
+              <a href={`${base}/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
 </BaseLayout>

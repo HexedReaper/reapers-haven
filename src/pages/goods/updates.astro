@@ -86,14 +86,14 @@ function formatHumanDate(dateString: string) {
 <BaseLayout title="Goods Updates Tracker">
   <main class="updates-container">
     <div class="header-group">
-      <h2 class="timeline-header">/dev/log_analyzer</h2>
+      <h2 class="timeline-header">/dev/logger</h2>
       <span class="system-badge">{getKaomoji("active")} status: active</span>
     </div>
 
     {
       groupedHistoryData.length === 0 ? (
         <p class="empty-history">
-          {getKaomoji("error")} No history records found.
+          {getKaomoji("error")} No history records found...
         </p>
       ) : (
         groupedHistoryData.map((block) => (

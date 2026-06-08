@@ -104,6 +104,14 @@ function getRandomKaomoji(category) {
             });
         });
     });
+
+    // swipe away sidebars on unfocus
+    const layout = document.getElementById('sidebar-layout');
+    document.querySelector('.main-content')?.addEventListener('click', () => {
+        if (window.innerWidth < 1280) { // 80rem = 1280px
+        layout?.classList.remove('left-collapsed', 'right-collapsed');
+        }
+    });
 </script>
 
 </html>
