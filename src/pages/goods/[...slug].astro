@@ -19,7 +19,7 @@ const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
 
 const allItems = await getCollection('goods');
-const base = import.meta.env.BASE_URL || '';
+const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '') + '/';
 
 ---
 
@@ -37,7 +37,7 @@ const base = import.meta.env.BASE_URL || '';
           <ul class="tree-list">
             {allItems.map(item => (
               <li>
-                <a href={`${base}/goods/${item.id}`} class={item.id === entry.id ? 'active-link' : ''}>
+                <a href={`${base}goods/${item.id}`} class={item.id === entry.id ? 'active-link' : ''}>
                   {item.data.title}
                 </a>
               </li>
