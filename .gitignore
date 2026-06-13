@@ -24,3 +24,6 @@ pnpm-debug.log*
 Thumbs.db
 
 *.swp
+
+
+src/data/goods-history.json
