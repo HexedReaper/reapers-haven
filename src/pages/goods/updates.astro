@@ -7,11 +7,10 @@ import "../../styles/updates.css";
 const historyData = getGoodsHistory();
 const base = import.meta.env.BASE_URL || "";
 
-// group logs under each date block by collectionName, and sub-group them by sectionTitle
-const groupedHistoryData = historyData.map((block) => {
+const groupedHistoryData = historyData.map((block: any) => {
   const collections: Record<string, Record<string, any[]>> = {};
 
-  block.logs.forEach((item) => {
+  block.logs.forEach((item: any) => {
     const isObject = typeof item === "object" && item !== null;
     const collectionName = isObject ? item.collectionName : "unknown";
     const sectionTitle = isObject ? item.sectionTitle : "Global";
@@ -83,11 +82,36 @@ function formatHumanDate(dateString: string) {
 }
 ---
 
-<BaseLayout title="Goods Updates Tracker">
+<BaseLayout title="Updates Tracker">
   <main class="updates-container">
+    <div class="updates-scanline"></div>
     <div class="header-group">
-      <h2 class="timeline-header">/dev/logger</h2>
-      <span class="system-badge">{getKaomoji("active")} status: active</span>
+      <div class="header-left">
+        <h2 class="timeline-header">/dev/logger</h2>
+        <span class="header-version">v2.4.1</span>
+      </div>
+      <div class="header-right">
+        <span class="system-badge">{getKaomoji("active")} status: active</span>
+        <span class="header-uptime">uptime: 99.8%</span>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-dot dot-green"></span>
+        <span class="stat-label">tracked:</span>
+        <span class="stat-value">{historyData.reduce((acc: number, b: any) => acc + b.logs.length, 0)} changes</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-dot dot-cyan"></span>
+        <span class="stat-label">collections:</span>
+        <span class="stat-value">{[...new Set(historyData.flatMap((b: any) => b.logs.map((l: any) => l.collectionName)))].length} files</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-dot dot-purple"></span>
+        <span class="stat-label">since:</span>
+        <span class="stat-value">{historyData.length > 0 ? formatHumanDate(historyData[historyData.length - 1].date) : "N/A"}</span>
+      </div>
     </div>
 
     {
@@ -99,40 +123,60 @@ function formatHumanDate(dateString: string) {
         groupedHistoryData.map((block) => (
           <details open class="update-accordion">
             <summary class="date-sticky-banner">
-              <span class="banner-folder">◆ goods/</span>
+              <span class="banner-icon">◆</span>
+              <span class="banner-folder">content/</span>
               <h3 class="block-date">[{formatHumanDate(block.date)}]</h3>
+              <span class="banner-count">{block.collections ? Object.keys(block.collections).length : 0} files</span>
               <span class="toggle-icon">
-                {getKaomoji("neutral")} [click to toggle]
+                {getKaomoji("neutral")} [toggle]
               </span>
             </summary>
 
             <div class="history-block-content">
               {Object.entries(block.collections).map(
-                ([collectionName, sections]) => (
+                ([collectionName, sections]: [string, any]) => {
+                  const allLogsInSection = Object.values(sections).flat();
+                  const totalAdded = allLogsInSection.filter((i: any) => i.action === 'added').length;
+                  const totalRemoved = allLogsInSection.filter((i: any) => i.action === 'removed').length;
+                  const totalUpdated = allLogsInSection.filter((i: any) => i.action === 'updated').length;
+                  
+                  return (
                   <details open class="collection-accordion">
                     <summary class="collection-header">
-                      <span class="collection-marker">≡</span>
+                      <span class="collection-icon">📄</span>
                       <span class="collection-name-text">
                         {collectionName}.md
+                      </span>
+                      <span class="collection-stats">
+                        {totalRemoved > 0 && <span class="cstat-removed">-{totalRemoved}</span>}
+                        {totalAdded > 0 && <span class="cstat-added">+{totalAdded}</span>}
+                        {totalUpdated > 0 && <span class="cstat-updated">~{totalUpdated}</span>}
                       </span>
                       <span class="collection-toggle">/* click to flip */</span>
                     </summary>
 
                     <div class="section-accordion-container">
-                      {Object.entries(sections).map(([sectionTitle, logs]) => {
+                      {Object.entries(sections).map(([sectionTitle, logs]: [string, any]) => {
                         const isGlobal = sectionTitle === "Global";
+                        const addedCount = logs.filter((i: any) => i.action === 'added').length;
+                        const removedCount = logs.filter((i: any) => i.action === 'removed').length;
+                        const updatedCount = logs.filter((i: any) => i.action === 'updated').length;
 
                         return (
                           <div
                             class={`section-wrapper ${isGlobal ? "is-global-fallback" : ""}`}
                           >
                             {!isGlobal ? (
-                              /* 1. Normal Defined Section Headers */
                               <details class="section-accordion">
                                 <summary class="section-summary-header">
                                   <span class="section-indicator">#</span>
                                   <span class="section-summary-title">
                                     {sectionTitle}
+                                  </span>
+                                  <span class="section-stats">
+                                    {removedCount > 0 && <span class="stat-removed">-{removedCount}</span>}
+                                    {addedCount > 0 && <span class="stat-added">+{addedCount}</span>}
+                                    {updatedCount > 0 && <span class="stat-updated">~{updatedCount}</span>}
                                   </span>
                                   <span class="section-count-badge">
                                     ({logs.length})
@@ -143,39 +187,24 @@ function formatHumanDate(dateString: string) {
                                 </summary>
 
                                 <div class="log-list">
-                                  {logs.map((item) => {
-                                    const isObject =
-                                      typeof item === "object" && item !== null;
-                                    const action = isObject
-                                      ? item.action
-                                      : "updated";
+                                  {logs.map((item: any) => {
+                                    const isObject = typeof item === "object" && item !== null;
+                                    const action = isObject ? item.action : "updated";
                                     const name = isObject ? item.name : "Item";
                                     const type = isObject ? item.type : "site";
-                                    const fallbackMessage = isObject
-                                      ? item.message
-                                      : String(item);
-                                    const targetUrl = `${base}/goods/${collectionName}/#${slugify(sectionTitle)}`;
-                                    const actionBracket =
-                                      action === "added"
-                                        ? "[ + ]"
-                                        : action === "removed"
-                                          ? "[ - ]"
-                                          : "[ * ]";
+                                    const fallbackMessage = isObject ? item.message : String(item);
+                                    const targetUrl = `${base}/${collectionName}/#${slugify(sectionTitle)}`;
+                                    const actionBracket = action === "added" ? "[ + ]" : action === "removed" ? "[ - ]" : "[ * ]";
 
                                     return (
-                                      <div class="log-card">
+                                      <div class="log-card" data-action={action}>
                                         {isObject ? (
                                           <div class="log-grid">
                                             <div class="meta-row">
-                                              <span
-                                                class={`status-tag tag-${action}`}
-                                              >
-                                                {actionBracket}{" "}
-                                                {action.toUpperCase()}
+                                              <span class={`status-tag tag-${action}`}>
+                                                {actionBracket} {action.toUpperCase()}
                                               </span>
-                                              <span
-                                                class={`type-tag tag-${type}`}
-                                              >
+                                              <span class={`type-tag tag-${type}`}>
                                                 {type}
                                               </span>
                                               <span class="entity-name">
@@ -183,36 +212,21 @@ function formatHumanDate(dateString: string) {
                                               </span>
                                             </div>
                                             <div class="context-row">
-                                              {/* Added section badge back here */}
                                               <div class="token-group">
-                                                <span class="path-label">
-                                                  sec:
-                                                </span>
-                                                <span class="path-token section-token">
-                                                  #{sectionTitle}
-                                                </span>
+                                                <span class="path-label">sec:</span>
+                                                <span class="path-token section-token">#{sectionTitle}</span>
                                               </div>
-                                              <a
-                                                href={targetUrl}
-                                                class="context-link"
-                                              >
-                                                {getKaomoji("action")}{" "}
-                                                [view_target]
+                                              <a href={targetUrl} class="context-link">
+                                                {getKaomoji("action")} [view_target]
                                               </a>
                                             </div>
                                           </div>
                                         ) : (
                                           <div class="fallback-row">
                                             <span class="log-pointer">»</span>
-                                            <span class="log-text">
-                                              {fallbackMessage}
-                                            </span>
-                                            <a
-                                              href={targetUrl}
-                                              class="context-link"
-                                            >
-                                              {getKaomoji("action")}{" "}
-                                              [view_target]
+                                            <span class="log-text">{fallbackMessage}</span>
+                                            <a href={targetUrl} class="context-link">
+                                              {getKaomoji("action")} [view_target]
                                             </a>
                                           </div>
                                         )}
@@ -222,82 +236,64 @@ function formatHumanDate(dateString: string) {
                                 </div>
                               </details>
                             ) : (
-                              /* 2. Global Fallback Sections (Renders flat inline with no accordion box wrapper) */
-                              <div class="log-list global-list-override">
-                                {logs.map((item) => {
-                                  const isObject =
-                                    typeof item === "object" && item !== null;
-                                  const action = isObject
-                                    ? item.action
-                                    : "updated";
-                                  const name = isObject ? item.name : "Item";
-                                  const type = isObject ? item.type : "site";
-                                  const fallbackMessage = isObject
-                                    ? item.message
-                                    : String(item);
-                                  const targetUrl = `${base}/goods/${collectionName}/#Global`;
-                                  const actionBracket =
-                                    action === "added"
-                                      ? "[ + ]"
-                                      : action === "removed"
-                                        ? "[ - ]"
-                                        : "[ * ]";
+                              <div class="global-section-wrapper">
+                                <div class="global-header-row">
+                                  <span class="section-indicator">#</span>
+                                  <span class="section-summary-title">Global</span>
+                                  <span class="section-stats">
+                                    {removedCount > 0 && <span class="stat-removed">-{removedCount}</span>}
+                                    {addedCount > 0 && <span class="stat-added">+{addedCount}</span>}
+                                    {updatedCount > 0 && <span class="stat-updated">~{updatedCount}</span>}
+                                  </span>
+                                </div>
+                                <div class="log-list global-list-override">
+                                  {logs.map((item: any) => {
+                                    const isObject = typeof item === "object" && item !== null;
+                                    const action = isObject ? item.action : "updated";
+                                    const name = isObject ? item.name : "Item";
+                                    const type = isObject ? item.type : "site";
+                                    const fallbackMessage = isObject ? item.message : String(item);
+                                    const targetUrl = `${base}/${collectionName}/#Global`;
+                                    const actionBracket = action === "added" ? "[ + ]" : action === "removed" ? "[ - ]" : "[ * ]";
 
-                                  return (
-                                    <div class="log-card">
-                                      {isObject ? (
-                                        <div class="log-grid">
-                                          <div class="meta-row">
-                                            <span
-                                              class={`status-tag tag-${action}`}
-                                            >
-                                              {actionBracket}{" "}
-                                              {action.toUpperCase()}
-                                            </span>
-                                            <span
-                                              class={`type-tag tag-${type}`}
-                                            >
-                                              {type}
-                                            </span>
-                                            <span class="entity-name">
-                                              {name}
-                                            </span>
-                                          </div>
-                                          <div class="context-row">
-                                            <div class="token-group">
-                                              <span class="path-label">
-                                                sec:
+                                    return (
+                                      <div class="log-card" data-action={action}>
+                                        {isObject ? (
+                                          <div class="log-grid">
+                                            <div class="meta-row">
+                                              <span class={`status-tag tag-${action}`}>
+                                                {actionBracket} {action.toUpperCase()}
                                               </span>
-                                              <span class="path-token section-token">
-                                                #Global
+                                              <span class={`type-tag tag-${type}`}>
+                                                {type}
+                                              </span>
+                                              <span class="entity-name">
+                                                {name}
                                               </span>
                                             </div>
-                                            <a
-                                              href={targetUrl}
-                                              class="context-link"
-                                            >
-                                              {getKaomoji("action")}{" "}
-                                              [view_target]
+                                            <div class="context-row">
+                                              <div class="token-group">
+                                                <span class="path-label">sec:</span>
+                                                <span class="path-token section-token">#Global</span>
+                                              </div>
+                                              <a href={targetUrl} class="context-link">
+                                                {getKaomoji("action")} [view_target]
+                                              </a>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div class="fallback-row">
+                                            <span class="log-pointer">»</span>
+                                            <span class="log-text">{fallbackMessage}</span>
+                                            <a href={targetUrl} class="context-link">
+                                              {getKaomoji("action")} [view_target]
                                             </a>
                                           </div>
-                                        </div>
-                                      ) : (
-                                        <div class="fallback-row">
-                                          <span class="log-pointer">»</span>
-                                          <span class="log-text">
-                                            {fallbackMessage}
-                                          </span>
-                                          <a
-                                            href={targetUrl}
-                                            class="context-link"
-                                          >
-                                            {getKaomoji("action")} [view_target]
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -305,7 +301,7 @@ function formatHumanDate(dateString: string) {
                       })}
                     </div>
                   </details>
-                ),
+                )},
               )}
             </div>
           </details>
