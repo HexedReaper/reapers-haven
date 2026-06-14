@@ -5,11 +5,9 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OVERRIDES_PATH = path.resolve(__dirname, 'goods-overrides.json');
-const CACHE_PATH = path.resolve(__dirname, '../data/goods-history.json');
+const OVERRIDES_PATH = path.resolve('src/scripts/goods-overrides.json');
+const CACHE_PATH = path.resolve('src/data/goods-history.json');
 
 function computeGoodsHistory() {
   try {
@@ -19,7 +17,7 @@ function computeGoodsHistory() {
       return [];
     }
 
-    const logOutput = execSync(`git log ${firstCommit}..HEAD --format="%H|%at" -- src/content/goods/`, { encoding: 'utf8' });
+    const logOutput = execSync(`git log ${firstCommit}..HEAD --format="%H|%at" -- src/content/goods/ src/content/tutorials/`, { encoding: 'utf8' });
     if (!logOutput.trim()) {
       console.log("No historical modifications caught in goods directory.");
       return [];
@@ -39,10 +37,10 @@ function computeGoodsHistory() {
       try {
         let diffOutput = '';
         try {
-          diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash} -- src/content/goods/`, { encoding: 'utf8' });
+          diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash} -- src/content/goods/ src/content/tutorials/`, { encoding: 'utf8' });
         } catch (parentErr) {
           const emptyTreeHash = '4b825dc642cb6eb9a0ea8e4eed6a8740dbe145e7';
-          diffOutput = execSync(`git diff ${emptyTreeHash} ${commit.hash} -- src/content/goods/`, { encoding: 'utf8' });
+          diffOutput = execSync(`git diff ${emptyTreeHash} ${commit.hash} -- src/content/goods/ src/content/tutorials/`, { encoding: 'utf8' });
         }
 
         if (diffOutput.trim()) {
@@ -100,8 +98,8 @@ function parseCommitDiff(diffText) {
 
   for (let line of lines) {
     if (line.startsWith('diff --git') || line.startsWith('--- ') || line.startsWith('+++ ')) {
-      const match = line.match(/[ab]\/src\/content\/goods\/(.+)\.md/);
-      currentCollection = match ? match[1] : currentCollection;
+      const match = line.match(/[ab]\/src\/content\/(goods|tutorials)\/(.+)\.md/);
+      currentCollection = match ? `${match[1]}/${match[2]}` : currentCollection;
       currentSection = "Global";
       continue;
     }

@@ -2,10 +2,9 @@
 // Reads pre-generated cache. Zero git calls at render time.
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CACHE_PATH = path.resolve(__dirname, '../data/goods-history.json');
+// CWD-relative path, same pattern as the original OVERRIDES_PATH
+const CACHE_PATH = path.resolve('src/data/goods-history.json');
 
 export function getGoodsHistory() {
   try {
