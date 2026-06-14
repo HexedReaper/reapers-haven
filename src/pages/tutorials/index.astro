@@ -1,4 +1,5 @@
 ---
+// ../tutorials/index.astro
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
@@ -16,10 +17,19 @@ const groupedTutorials = sortedTutorials.reduce((acc, tutorial) => {
 ---
 
 <BaseLayout title="All Guides">
-  <div class="index-content">
+  <div class="index-content" data-view="list">
     <h1>All Guides</h1>
     <p>The complete archive of my guides.</p>
     <hr />
+
+    <div class="index-toolbar">
+      <button data-view="list" title="List view" aria-label="Switch to list view">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="2" rx="1"/><rect x="3" y="11" width="18" height="2" rx="1"/><rect x="3" y="18" width="18" height="2" rx="1"/></svg>
+      </button>
+      <button data-view="cards" title="Cards view" aria-label="Switch to cards view">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+      </button>
+    </div>
 
     {Object.entries(groupedTutorials).map(([category, tutorials]) => (
       <div>
@@ -34,4 +44,24 @@ const groupedTutorials = sortedTutorials.reduce((acc, tutorial) => {
       </div>
     ))}
   </div>
+
+  <script is:inline>
+  (function() {
+    var c = document.querySelector('.index-content');
+    if (!c) return;
+    var saved = localStorage.getItem('index-view') || 'list';
+    c.setAttribute('data-view', saved);
+    document.querySelectorAll('.index-toolbar button').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.view === saved);
+      b.addEventListener('click', function() {
+        var v = b.dataset.view;
+        c.setAttribute('data-view', v);
+        localStorage.setItem('index-view', v);
+        document.querySelectorAll('.index-toolbar button').forEach(function(x) {
+          x.classList.toggle('active', x.dataset.view === v);
+        });
+      });
+    });
+  })();
+  </script>
 </BaseLayout>
