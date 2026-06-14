@@ -1,0 +1,225 @@
+/* ==========================================================================
+   INDEX PAGES - index.css
+========================================================================== */
+.index-content {
+    max-width: 80rem;
+    margin: 0 auto 1.5rem auto;
+    padding: 5.5rem 2.5rem 1rem 2.5rem;
+}
+
+.index-content>ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-left: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.index-content>ul>li {
+    position: relative;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+}
+
+.index-content>ul>li::before {
+    display: none;
+}
+
+.index-content>ul>li:hover {
+    background: rgba(192, 251, 226, 0.04);
+    border-color: rgba(192, 251, 226, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    transform: translateX(4px);
+}
+
+.index-content>ul>li a {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.25rem;
+    height: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text);
+    background: none;
+    text-decoration: none;
+}
+
+.index-content>ul>li a:hover {
+    color: var(--accent);
+    background: none;
+    background-size: 0;
+}
+
+.index-content>ul>li a span {
+    font-size: 0.8rem;
+    font-weight: normal;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.index-content h3 {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    padding: 0.5rem 0;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px dashed rgba(157, 126, 250, 0.2);
+}
+
+.index-content div>ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+    border-left: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.index-content div>ul>li {
+    position: relative;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid var(--border-glass);
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    margin-bottom: 0;
+}
+
+.index-content div>ul>li::before {
+    display: none;
+}
+
+.index-content div>ul>li:hover {
+    background: rgba(112, 190, 230, 0.05);
+    border-color: rgba(112, 190, 230, 0.3);
+    border-left-color: var(--accent);
+    transform: translateX(3px);
+}
+
+.index-content div>ul>li a {
+    display: block;
+    padding: 0.75rem 1rem;
+    height: 100%;
+    box-sizing: border-box;
+    font-weight: bold;
+    color: var(--text);
+    background: none;
+    text-decoration: none;
+}
+
+.index-content div>ul>li a:hover {
+    color: var(--accent);
+    background: none;
+    background-size: 0;
+}
+
+@media (max-width: 600px) {
+    .index-content {
+        padding: 5.5rem 1rem 1rem 1rem;
+    }
+
+    .index-content>ul>li,
+    .index-content div>ul>li {
+        padding: 0.75rem;
+    }
+
+    .index-content>ul>li a,
+    .index-content div>ul>li a {
+        font-size: 0.9rem;
+    }
+}
+
+
+/* ==========================================================================
+   VIEW TOGGLE TOOLBAR
+========================================================================== */
+.index-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.index-toolbar button {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    border-radius: 4px;
+    color: var(--text-muted);
+    padding: 0.4rem 0.55rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.index-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+}
+
+.index-toolbar button.active {
+    background: rgba(192, 251, 226, 0.1);
+    border-color: rgba(192, 251, 226, 0.3);
+    color: var(--accent);
+}
+
+.index-toolbar button svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* ==========================================================================
+   CARDS VIEW — top-level list (goods page)
+========================================================================== */
+.index-content[data-view="cards"] > ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.index-content[data-view="cards"] > ul > li {
+    min-height: 110px;
+}
+
+.index-content[data-view="cards"] > ul > li a {
+    justify-content: flex-end;
+}
+
+/* ==========================================================================
+   CARDS VIEW — nested lists (tutorials page grouped by category)
+========================================================================== */
+.index-content[data-view="cards"] div > ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
+}
+
+.index-content[data-view="cards"] div > ul > li:hover {
+    transform: translateY(-3px);
+}
+
+/* Cards view mobile */
+@media (max-width: 600px) {
+    .index-content {
+        padding: 5.5rem 1rem 1rem 1rem;
+    }
+
+    .index-content>ul>li a,
+    .index-content div>ul>li a {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+}

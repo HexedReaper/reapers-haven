@@ -1,0 +1,423 @@
+/* ==========================================================================
+   SIDEBAR LAYOUT SYSTEM sidebar.css
+========================================================================== */
+.sidebar-layout-wrapper {
+    display: block;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+/* Main content: 90% width with 5% margins, stretches on zoom out */
+.main-content {
+    width: 90%;
+    margin: 0 5%;
+    padding: 0;
+    max-width: none;
+    transition: margin 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar {
+    position: fixed;
+    top: 60px;
+    bottom: 0;
+    height: calc(100vh - 60px);
+    overflow-y: hidden;
+    width: var(--sidebar-width);
+    background-color: rgba(20, 21, 33, 0.92);
+    backdrop-filter: blur(16px) saturate(150%);
+    z-index: 90;
+    padding: 1.5rem 0.75rem;
+    box-sizing: border-box;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* CRT Scanline Overlay */
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--sidebar-scanline) 2px, var(--sidebar-scanline) 4px);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.5;
+}
+
+/* Neon Edge Glow on Sidebar Hover */
+.left-sidebar {
+    left: 0;
+    border-right: 1px solid var(--border-glass);
+}
+
+.left-sidebar:hover {
+    box-shadow: 5px 0 25px -5px rgba(112, 190, 230, 0.15);
+}
+
+.right-sidebar {
+    right: 0;
+    border-left: 1px solid var(--border-glass);
+}
+
+.right-sidebar:hover {
+    box-shadow: -5px 0 25px -5px rgba(157, 126, 250, 0.15);
+}
+
+.sidebar .expand-btn {
+    display: none;
+    font-weight: bold;
+    letter-spacing: 3px;
+    font-size: 0.75rem;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 2rem 0;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+}
+
+.sidebar .expand-btn:hover {
+    color: var(--accent);
+    text-decoration: none;
+    background: rgba(192, 251, 226, 0.03);
+    text-shadow: 0 0 8px rgba(96, 247, 129, 0.4);
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-glass);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+/* Terminal Cursor - Soft slow fade */
+.sidebar-title {
+    margin: 0;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-title::after {
+    content: '█';
+    font-size: 0.7rem;
+    margin-left: 4px;
+    animation: slowFade 2.5s ease-in-out infinite;
+    color: var(--accent);
+}
+
+@keyframes slowFade {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.collapse-btn {
+    position: static; 
+    transform: none;
+    padding: 0 0.25rem;
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-size: 0.7rem; 
+    font-family: var(--font-mono); 
+    background: transparent; 
+    border: 1px solid transparent; 
+    border-radius: 3px; 
+    color: var(--text-muted);
+    cursor: pointer; 
+    transition: all 0.2s ease;
+}
+
+.collapse-btn:hover {
+    color: var(--accent-alt);
+    border-color: rgba(157, 126, 250, 0.3);
+    background: rgba(157, 126, 250, 0.05);
+    text-decoration: none;
+}
+
+.left-sidebar .sidebar-title {
+    color: var(--accent-cyan);
+}
+
+.left-sidebar .sidebar-title::after {
+    color: var(--accent-cyan);
+}
+
+.right-sidebar .sidebar-title {
+    color: var(--accent-alt);
+}
+
+.right-sidebar .sidebar-title::after {
+    color: var(--accent-alt);
+}
+
+/* TILE SYSTEM */
+.tree-list,
+.toc-list {
+    margin: 0;
+    padding-left: 0;
+    border-left: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    position: relative;
+    z-index: 2;
+}
+
+.tree-list li,
+.toc-list li {
+    margin-bottom: 0;
+    position: relative;
+    list-style: none;
+}
+
+.tree-list li::before,
+.toc-list li::before {
+    display: none !important;
+}
+
+.tree-list a,
+.toc-list a {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    word-break: break-word;
+    white-space: normal;
+}
+
+.toc-list .depth-1 a,
+.toc-list .depth-2 a {
+    color: var(--accent-alt);
+    font-weight: bold;
+}
+
+.toc-list .depth-3 a {
+    color: var(--accent-cyan);
+    padding-left: 1.25rem;
+    font-size: 0.75rem;
+}
+
+.toc-list .depth-4 a,
+.toc-list .depth-5 a,
+.toc-list .depth-6 a {
+    color: var(--text-muted);
+    padding-left: 1.75rem;
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+/* Hover: Clean shift and border */
+.tree-list a:hover,
+.toc-list a:hover {
+    color: var(--text) !important;
+    border-color: rgba(192, 251, 226, 0.2);
+    background: rgba(192, 251, 226, 0.04);
+    transform: translateX(3px);
+    box-shadow: -3px 0 0 var(--accent-cyan);
+}
+
+.toc-list a:hover {
+    box-shadow: -3px 0 0 var(--accent-alt);
+}
+
+/* Active Link: Clean, solid, slow soft glow */
+.tree-list a.active-link {
+    color: var(--accent) !important;
+    background: rgba(96, 247, 129, 0.06);
+    border-color: rgba(96, 247, 129, 0.2);
+    border-left: 3px solid var(--accent);
+    font-weight: bold;
+    animation: subtleGlow 3s ease-in-out infinite;
+}
+
+.tree-list a.active-link::before {
+    content: "▸";
+    margin-right: 0.4rem;
+    color: var(--accent);
+    font-size: 0.7rem;
+    animation: none !important;
+}
+
+.tree-list a.active-link::after {
+    display: none;
+}
+
+/* Remove the pulsing bar */
+
+@keyframes subtleGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(96, 247, 129, 0.05);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(96, 247, 129, 0.2);
+    }
+}
+
+/* ==========================================================================
+   DESKTOP LAYOUT
+========================================================================== */
+@media (min-width: 80rem) {
+
+    .sidebar-layout-wrapper.left-collapsed .left-sidebar,
+    .sidebar-layout-wrapper.right-collapsed .right-sidebar {
+        width: var(--sidebar-collapsed-width);
+        padding: 0;
+    }
+
+    .sidebar-layout-wrapper.left-collapsed .left-sidebar .sidebar-inner,
+    .sidebar-layout-wrapper.right-collapsed .right-sidebar .sidebar-inner {
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease, visibility 0.15s ease;
+    }
+
+    .sidebar-inner {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.2s ease 0.1s, visibility 0.2s ease 0.1s;
+    }
+
+    .sidebar-layout-wrapper.left-collapsed .left-sidebar .expand-btn,
+    .sidebar-layout-wrapper.right-collapsed .right-sidebar .expand-btn {
+        display: flex;
+    }
+
+    /* Main content offset - Override 5% margin with sidebar widths */
+    .sidebar-layout-wrapper .main-content {
+        margin-left: calc(var(--sidebar-width) + 2rem);
+        margin-right: calc(var(--sidebar-width) + 2rem);
+        width: auto;
+    }
+
+    .sidebar-layout-wrapper.left-collapsed .main-content {
+        margin-left: calc(var(--sidebar-collapsed-width) + 2rem);
+    }
+
+    .sidebar-layout-wrapper.right-collapsed .main-content {
+        margin-right: calc(var(--sidebar-collapsed-width) + 2rem);
+    }
+
+    /* Sidebar inner scroll */
+    .sidebar-inner {
+        height: calc(100vh - 4rem);
+        overflow-y: auto;
+        padding-right: 0.75rem;
+        padding-bottom: 3rem;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-glass) transparent;
+    }
+
+    .sidebar-inner::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .sidebar-inner::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-inner::-webkit-scrollbar-thumb {
+        background: var(--border-glass);
+    }
+}
+
+/* ==========================================================================
+   MOBILE LAYOUT (Drawer System)
+========================================================================== */
+@media (max-width: 79.99rem) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        margin-top: 6.5rem;
+        height: calc(100vh - 6.5rem);
+        overflow-y: auto;
+
+        backdrop-filter: none !important;
+        width: 16.5rem;
+        max-width: 85vw;
+        background-color: rgba(20, 21, 33, 0.98);
+        z-index: 200;
+        padding: 1.5rem 0.75rem;
+        box-sizing: border-box;
+    }
+
+    /* Reset desktop margins back to 5% */
+    .sidebar-layout-wrapper .main-content {
+        margin-left: 5%;
+        margin-right: 5%;
+        width: 90%;
+        margin-top: 0;
+        padding-top: 5rem;
+    }
+
+    .sidebar-layout-wrapper {
+        margin-top: 2rem;
+    }
+
+    .sidebar-inner { 
+        height: auto; 
+        min-height: 100%;
+        overflow-y: visible; 
+        -webkit-overflow-scrolling: touch; 
+        padding-bottom: 4rem; 
+        padding-right: 0.5rem; 
+        display: block !important; 
+        opacity: 1; 
+        visibility: visible;
+    }
+
+    /* Default state: off-screen drawer positioning */
+    .left-sidebar {
+        transform: translateX(-100%);
+    }
+
+    .right-sidebar {
+        transform: translateX(100%);
+    }
+
+    /* Completely hide the old floating vertical edge tabs */
+    .sidebar .expand-btn,
+    .left-sidebar .expand-btn,
+    .right-sidebar .expand-btn {
+        display: none !important;
+    }
+
+    /* Expanded Drawer Trigger States */
+    .sidebar-layout-wrapper.left-collapsed .left-sidebar,
+    .sidebar-layout-wrapper.right-collapsed .right-sidebar {
+        transform: translateX(0);
+        width: 16.5rem;
+        padding: 1.5rem 0.75rem;
+    }
+}

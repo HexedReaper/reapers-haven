@@ -1,0 +1,167 @@
+/* ==========================================================================
+    NAVIGATION - nav.css
+========================================================================== */
+.main-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(20, 21, 33, 0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--border-glass);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+}
+
+/* Animated terminal glow line at the bottom of the nav */
+.main-nav::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-alt), var(--accent-cyan), var(--accent-alt), transparent);
+    background-size: 200% 100%;
+    animation: navGlow 8s linear infinite;
+    opacity: 0.7;
+}
+
+@keyframes navGlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+.main-nav a,
+.main-nav button {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+    border: 1px solid var(--border-glass);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+    position: relative;
+}
+
+.main-nav a:hover,
+.main-nav button:hover {
+    color: var(--text);
+    border-color: rgba(192, 251, 226, 0.4);
+    background: rgba(192, 251, 226, 0.05);
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.main-nav a:active,
+.main-nav button:active {
+    transform: translateY(1px);
+}
+
+/* Active page link styling */
+.main-nav a.active-nav-link {
+    color: var(--accent);
+    border-color: rgba(96, 247, 129, 0.4);
+    background: rgba(96, 247, 129, 0.05);
+    box-shadow: 0 0 8px rgba(96, 247, 129, 0.15);
+}
+
+/* Desktop layout rules */
+#open-search-btn {
+    border-color: rgba(157, 126, 250, 0.3);
+    color: var(--accent-alt);
+    margin-left: auto; /* Pushes search to the right side on desktop */
+}
+
+#open-search-btn:hover {
+    border-color: var(--accent-alt);
+    background: rgba(157, 126, 250, 0.08);
+    box-shadow: 0 0 12px rgba(157, 126, 250, 0.15);
+}
+
+.nav-sidebar-toggle {
+    display: none;
+}
+
+.main-nav hr {
+    display: none;
+}
+
+/* ==========================================================================
+   MOBILE & ZOOM RESPONSIVE SYSTEM
+========================================================================== */
+@media (max-width: 79.99rem) {
+    .main-nav {
+        padding: 0.6rem 0.75rem;
+        gap: 0.4rem 0.35rem;
+        flex-wrap: wrap; /* Allows split-row layout */
+    }
+
+    /* 1. Base Element Sizing Styles */
+    .main-nav a, 
+    .main-nav button {
+        font-size: 0.65rem;
+        padding: 5px 8px;
+    }
+
+    /* 2. Visual Separation Row Line */
+    .main-nav hr {
+        display: block;
+        width: 100%;
+        border: none;
+        border-top: 1px dashed var(--border-glass);
+        margin: 0.25rem 0;
+        order: 5; /* Positioned directly between row structures */
+    }
+
+    /* 3. Link Navigation Row (Pushed below structural buttons) */
+    .main-nav a {
+        order: 10;
+        flex-grow: 1;
+        text-align: center;
+    }
+
+    /* 4. Action Overlay Control Elements (Pinned to row 1) */
+    .nav-sidebar-toggle {
+        display: inline-block;
+        font-weight: bold;
+    }
+
+    .nav-sidebar-toggle.left-toggle {
+        order: 1;
+        border-color: rgba(112, 190, 230, 0.4) !important;
+        color: var(--accent-cyan) !important;
+        margin-right: auto; /* Locks left side positioning */
+    }
+
+    #open-search-btn {
+        order: 2;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .nav-sidebar-toggle.right-toggle {
+        order: 3;
+        border-color: rgba(157, 126, 250, 0.4) !important;
+        color: var(--accent-alt) !important;
+        margin-left: auto; /* Locks right side positioning */
+    }
+
+    /* Hide telemetry on tight mobile viewports to preserve clean layout spaces */
+    .telemetry-toggle {
+        display: none !important;
+    }
+}

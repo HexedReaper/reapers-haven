@@ -1,0 +1,23 @@
+/* variables.css */
+:root {
+    --bg: rgb(28, 29, 47);
+    --text: rgb(192, 251, 226);
+    --text-muted: rgb(135, 185, 165);
+    --accent: rgb(96, 247, 129);
+    --bg-glass: rgba(28, 29, 47, 0.6);
+    --border-glass: rgba(192, 251, 226, 0.15);
+    --accent-alt: rgb(157, 126, 250);
+    --accent-cyan: rgb(112, 190, 230);
+    
+    /* New Sidebar Variables */
+    --sidebar-glow: rgba(96, 247, 129, 0.05);
+    --sidebar-scanline: rgba(0, 0, 0, 0.03);
+    --sidebar-width: 17rem;
+    --sidebar-collapsed-width: 3.5rem;
+    
+    /* New Font Variables */
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-size-base: 0.95rem;
+    --line-height-base: 1.7;
+    --letter-spacing-base: 0.01em;
+}
