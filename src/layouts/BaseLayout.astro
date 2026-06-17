@@ -5,8 +5,7 @@ import '../styles/global.css';
 import kaomojiData from '../data/kaomojis.json';
 
 const { title } = Astro.props;
-const base = import.meta.env.BASE_URL || '';
-
+const base = (import.meta.env.BASE_URL || '').replace(/\/+$/, '');
 function getRandomKaomoji(category) {
   const list = kaomojiData[category];
   if (!list || list.length === 0) return '•_•';

@@ -11,14 +11,10 @@
     "dev": "node src/scripts/generate-goods-cache.mjs && astro dev",
     "preview": "astro preview",
     "astro": "astro",
-    "track-goods": "node src/scripts/goods-tracker.js",
-    "deploy": "npm run build && GIT_SSH_COMMAND='ssh -4' gh-pages -d dist -b pages -u 'codeberg-bot <noreply@codeberg.org>'"
+    "track-goods": "node src/scripts/goods-tracker.js"
   },
   "dependencies": {
     "astro": "^6.2.1",
     "sharp": "^0.34.5"
-  },
-  "devDependencies": {
-    "gh-pages": "^6.3.0"
   }
 }

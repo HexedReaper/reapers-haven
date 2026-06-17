@@ -5,7 +5,7 @@ import kaomojiData from "../../data/kaomojis.json";
 import "../../styles/updates.css";
 
 const historyData = getGoodsHistory();
-const base = import.meta.env.BASE_URL || "";
+const base = (import.meta.env.BASE_URL || "").replace(/\/+$/, "");
 
 const groupedHistoryData = historyData.map((block: any) => {
   const collections: Record<string, Record<string, any[]>> = {};

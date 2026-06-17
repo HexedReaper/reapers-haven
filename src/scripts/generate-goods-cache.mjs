@@ -53,7 +53,7 @@ function computeGoodsHistory() {
       const vaultDir = path.resolve(commit.vault.path);
       
       try {
-        diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash}`, { cwd: vaultDir, encoding: 'utf8' });
+        diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash}`, { cwd: vaultDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
       } catch (parentErr) {
         // Fallback for root commits: use git diff-tree which handles missing parents natively
         diffOutput = execSync(`git diff-tree --root -p --no-commit-id ${commit.hash}`, { cwd: vaultDir, encoding: 'utf8' });
