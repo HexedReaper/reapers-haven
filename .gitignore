@@ -25,7 +25,8 @@ Thumbs.db
 *.swp
 
 # Prevents raw files and local logs from hitting any remote server
-src/content/goods/
-src/content/tutorials/
+src/content/goods
+src/content/tutorials
 src/data/goods-history.json
-.vaultpasssrc/scripts/goods-overrides.json
+.vaultpass
+src/scripts/goods-overrides.json

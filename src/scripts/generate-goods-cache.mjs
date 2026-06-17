@@ -1,7 +1,4 @@
 // src/scripts/generate-goods-cache.mjs
-// Run once before builds: node src/scripts/generate-goods-cache.mjs
-// Output: src/data/goods-history.json
-
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -9,97 +6,118 @@ import fs from 'fs';
 const OVERRIDES_PATH = path.resolve('src/scripts/goods-overrides.json');
 const CACHE_PATH = path.resolve('src/data/goods-history.json');
 
+const VAULTS = [
+  { path: 'src/content/goods', collectionName: 'goods' },
+  { path: 'src/content/tutorials', collectionName: 'tutorials' }
+];
+
 function computeGoodsHistory() {
-  try {
-    const firstCommit = execSync('git rev-list --max-parents=0 HEAD', { encoding: 'utf8' }).trim();
-    if (!firstCommit) {
-      console.log("Could not find the initial commit repository root.");
-      return [];
-    }
+  let allCommits = [];
 
-    const logOutput = execSync(`git log ${firstCommit}..HEAD --format="%H|%at" -- src/content/goods/ src/content/tutorials/`, { encoding: 'utf8' });
-    if (!logOutput.trim()) {
-      console.log("No historical modifications caught in goods directory.");
-      return [];
-    }
+  // 1. Fetch commits from both sovereign vault repositories
+  VAULTS.forEach(vault => {
+    const vaultPath = path.resolve(vault.path);
+    if (!fs.existsSync(vaultPath)) return;
 
-    const commits = logOutput.trim().split('\n')
-      .map(line => {
-        const [hash, timestamp] = line.split('|');
-        const parsedDate = new Date(parseInt(timestamp) * 1000);
-        return { hash, date: parsedDate };
-      })
-      .filter(commit => !isNaN(commit.date.getTime()));
-
-    let historyLog = [];
-
-    commits.forEach(commit => {
-      try {
-        let diffOutput = '';
-        try {
-          diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash} -- src/content/goods/ src/content/tutorials/`, { encoding: 'utf8' });
-        } catch (parentErr) {
-          const emptyTreeHash = '4b825dc642cb6eb9a0ea8e4eed6a8740dbe145e7';
-          diffOutput = execSync(`git diff ${emptyTreeHash} ${commit.hash} -- src/content/goods/ src/content/tutorials/`, { encoding: 'utf8' });
-        }
-
-        if (diffOutput.trim()) {
-          const formattedDate = commit.date.toISOString().split('T')[0];
-          const logs = parseCommitDiff(diffOutput);
-          if (logs.length > 0) {
-            historyLog.push({ date: formattedDate, logs: logs });
-          }
-        }
-      } catch (err) {
-        console.warn(`Could not process diff for commit ${commit.hash}, skipping.`);
+    try {
+      // Check if it's actually a git repo
+      execSync('git status', { cwd: vaultPath, stdio: 'ignore' });
+      
+      const logOutput = execSync(`git log --format="%H|%at"`, { cwd: vaultPath, encoding: 'utf8' });
+      if (logOutput.trim()) {
+        const commits = logOutput.trim().split('\n').map(line => {
+          const [hash, timestamp] = line.split('|');
+          return { 
+            hash, 
+            date: new Date(parseInt(timestamp) * 1000), 
+            vault: vault 
+          };
+        }).filter(c => !isNaN(c.date.getTime()));
+        
+        allCommits.push(...commits);
       }
-    });
+    } catch (e) {
+      console.warn(`Could not read git history for vault: ${vault.collectionName}`);
+    }
+  });
 
-    if (fs.existsSync(OVERRIDES_PATH)) {
+  // Sort all merged commits chronologically
+  allCommits.sort((a, b) => b.date - a.date);
+
+  let historyLog = [];
+
+  // 2. Diff parsing per commit inside its respective vault
+  allCommits.forEach(commit => {
+    try {
+      let diffOutput = '';
+      const vaultDir = path.resolve(commit.vault.path);
+      
       try {
-        const overrides = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
-        historyLog.forEach(block => {
-          block.logs.forEach(item => {
-            if (typeof item === 'object' && item !== null) {
-              const itemLookupKey = `${item.collectionName}:${item.name}`;
-              const sectionLookupKey = `${item.collectionName}:${item.sectionTitle}`;
-              if (overrides[sectionLookupKey]) {
-                const sectionFix = overrides[sectionLookupKey];
-                if (sectionFix.sectionTitle) item.sectionTitle = sectionFix.sectionTitle;
-              }
-              if (overrides[itemLookupKey]) {
-                const itemFix = overrides[itemLookupKey];
-                if (itemFix.sectionTitle) item.sectionTitle = itemFix.sectionTitle;
-                if (itemFix.name) item.name = itemFix.name;
-                if (itemFix.message) item.message = itemFix.message;
-              }
+        diffOutput = execSync(`git diff ${commit.hash}~1 ${commit.hash}`, { cwd: vaultDir, encoding: 'utf8' });
+      } catch (parentErr) {
+        // Fallback for root commits: use git diff-tree which handles missing parents natively
+        diffOutput = execSync(`git diff-tree --root -p --no-commit-id ${commit.hash}`, { cwd: vaultDir, encoding: 'utf8' });
+      }
+
+      if (diffOutput.trim()) {
+        const formattedDate = commit.date.toISOString().split('T')[0];
+        // Pass the collection name directly since the paths inside the vault won't include 'src/content/...'
+        const logs = parseCommitDiff(diffOutput, commit.vault.collectionName);
+        if (logs.length > 0) {
+          historyLog.push({ date: formattedDate, logs: logs });
+        }
+      }
+    } catch (err) {
+      console.warn(`Could not process diff for commit ${commit.hash}`);
+    }
+  });
+
+  // 3. Apply Overrides
+  if (fs.existsSync(OVERRIDES_PATH)) {
+    try {
+      const overrides = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
+      historyLog.forEach(block => {
+        block.logs.forEach(item => {
+          if (typeof item === 'object' && item !== null) {
+            const itemLookupKey = `${item.collectionName}:${item.name}`;
+            const sectionLookupKey = `${item.collectionName}:${item.sectionTitle}`;
+            if (overrides[sectionLookupKey]) {
+              const sectionFix = overrides[sectionLookupKey];
+              if (sectionFix.sectionTitle) item.sectionTitle = sectionFix.sectionTitle;
             }
-          });
+            if (overrides[itemLookupKey]) {
+              const itemFix = overrides[itemLookupKey];
+              if (itemFix.sectionTitle) item.sectionTitle = itemFix.sectionTitle;
+              if (itemFix.name) item.name = itemFix.name;
+              if (itemFix.message) item.message = itemFix.message;
+            }
+          }
         });
-      } catch (jsonErr) {
-        console.warn("Failed to parse goods-overrides.json:", jsonErr.message);
-      }
+      });
+    } catch (jsonErr) {
+      console.warn("Failed to parse goods-overrides.json:", jsonErr.message);
     }
-
-    return historyLog;
-  } catch (error) {
-    console.error("Error executing repository log analysis:", error.message);
-    return [];
   }
+
+  return historyLog;
 }
 
-// ---------- Parsers (copied verbatim from original goods-tracker.js) ----------
+// ---------- Parsers ----------
 
-function parseCommitDiff(diffText) {
+function parseCommitDiff(diffText, explicitCollection) {
   const lines = diffText.split('\n');
-  let currentCollection = "";
+  let currentCollection = explicitCollection;
   let currentSection = "Global";
   let fileLines = [];
 
   for (let line of lines) {
+    // We adjust the regex because inside the vault, the diff path is just "a/android.md"
     if (line.startsWith('diff --git') || line.startsWith('--- ') || line.startsWith('+++ ')) {
-      const match = line.match(/[ab]\/src\/content\/(goods|tutorials)\/(.+)\.md/);
-      currentCollection = match ? `${match[1]}/${match[2]}` : currentCollection;
+      const match = line.match(/[ab]\/(.+)\.md/);
+      if (match) {
+        // Build the simulated path so it matches your UI expectations (e.g. "goods/android")
+        currentCollection = `${explicitCollection}/${match[1]}`;
+      }
       currentSection = "Global";
       continue;
     }
@@ -265,4 +283,4 @@ function calculateLevenshtein(a, b) {
 const data = computeGoodsHistory();
 fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
 fs.writeFileSync(CACHE_PATH, JSON.stringify({ _cachedAt: Date.now(), history: data }, null, 2));
-console.log(`✓ Goods history cached (${data.length} date blocks) → ${CACHE_PATH}`);
+console.log(`✓ Vault history mapped & cached (${data.length} updates recorded) → ${CACHE_PATH}`);
