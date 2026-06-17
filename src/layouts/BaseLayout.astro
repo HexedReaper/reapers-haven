@@ -1,25 +1,27 @@
 ---
-// BaseLayout.astro
+// src/layouts/BaseLayout.astro
 import { getCollection } from 'astro:content';
 import '../styles/global.css';
 import kaomojiData from '../data/kaomojis.json';
 
 const { title } = Astro.props;
+// Fixed base URL logic to prevent double-slashes
 const base = (import.meta.env.BASE_URL || '').replace(/\/+$/, '');
+
 function getRandomKaomoji(category) {
   const list = kaomojiData[category];
   if (!list || list.length === 0) return '•_•';
   const randomIndex = Math.floor(Math.random() * list.length);
   return list[randomIndex];
 }
-
 ---
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
     <title>{title} | Reaper's Haven</title>
-
 </head>
 <body>
    <nav class="main-nav">
@@ -68,7 +70,6 @@ function getRandomKaomoji(category) {
         <ul id="search-results" class="clean-list"></ul>
       </div>
     </dialog>
-
 
     <slot />
     
@@ -144,4 +145,4 @@ function getRandomKaomoji(category) {
     });
 </script>
 
-</html> 
+</html>
