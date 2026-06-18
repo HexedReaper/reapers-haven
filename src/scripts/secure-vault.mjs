@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import crypto from 'crypto';
 
 const PASSWORD = fs.readFileSync(path.resolve('.vaultpass'), 'utf8').trim();
 const TARGET_DIRS = ['dist'];
@@ -277,6 +278,12 @@ TARGET_DIRS.forEach((dir) => {
         // 1. Replace PageCrypt's default style
         encryptedHtml = encryptedHtml.replace(/<style>[\s\S]*?<\/style>/, CUSTOM_STYLE);
         
+        // 2. Inject the auto-login script before </body>
+        encryptedHtml = encryptedHtml.replace(
+          '</body>',
+          AUTO_LOGIN_SCRIPT + '\n</body>'
+        );
+        
         fs.writeFileSync(file, encryptedHtml, 'utf8');
 
         console.log(`Secured & Patched: ${path.relative(process.cwd(), file)}`);
@@ -288,10 +295,32 @@ TARGET_DIRS.forEach((dir) => {
   }
 });
 
-// const searchIndexPath = path.resolve('dist/search-index.json');
-// if (fs.existsSync(searchIndexPath)) {
-//   fs.unlinkSync(searchIndexPath);
-//   console.log('Deleted plaintext search-index.json from dist.');
-// }
+// =====================================================================
+// ENCRYPT SEARCH INDEX
+// =====================================================================
+const searchIndexPath = path.resolve('dist/search-index.json');
+if (fs.existsSync(searchIndexPath)) {
+  try {
+    const plaintext = fs.readFileSync(searchIndexPath, 'utf8');
+    
+    //derive a 256-bit key from the password using SHA-256
+    const key = crypto.createHash('sha256').update(PASSWORD).digest();
+    const iv = crypto.randomBytes(12); // 12 bytes is standard for AES-GCM
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    
+    let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag().toString('hex');
+    
+    //format: iv:authTag:ciphertext
+    const payload = iv.toString('hex') + ':' + authTag + ':' + encrypted;
+    
+    fs.writeFileSync(path.resolve('dist/search-index.enc'), payload);
+    fs.unlinkSync(searchIndexPath); //destroy the plaintext version
+    console.log('🔐 Encrypted search-index.json to search-index.enc');
+  } catch (err) {
+    console.error('Failed to encrypt search index:', err.message);
+  }
+}
 
 console.log(`Security layer applied successfully to ${secureCount} paths.`);

@@ -5,16 +5,61 @@ const base = search_modal?.dataset.base || '/';
 let search_list = [];
 let searchLoaded = false;
 
+// Must match the key in secure-vault.mjs AUTO_LOGIN_SCRIPT
+const STORAGE_KEY = 'reapers_haven_vault_token';
+
 async function loadSearchData() {
   if (searchLoaded) return search_list;
+  
+  const savedPass = localStorage.getItem(STORAGE_KEY);
+  if (!savedPass) {
+    console.error("Vault password not found in local storage. Search disabled.");
+    const searchBtn = document.querySelector('#open-search-btn');
+    if (searchBtn) searchBtn.style.display = 'none';
+    return search_list;
+  }
+
   try {
-    const res = await fetch(`${base}search-index.json`);
-    if (res.ok) {
-      search_list = await res.json();
-      searchLoaded = true;
+    // Fetch the encrypted file instead of the plaintext JSON
+    const res = await fetch(`${base}search-index.enc`);
+    if (!res.ok) {
+       console.error("Failed to fetch encrypted search index.");
+       const searchBtn = document.querySelector('#open-search-btn');
+       if (searchBtn) searchBtn.style.display = 'none';
+       return search_list;
     }
+    
+    const payload = await res.text();
+    const parts = payload.split(':');
+    if (parts.length !== 3) throw new Error("Invalid payload format");
+    
+    const iv = new Uint8Array(parts[0].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    const authTag = new Uint8Array(parts[1].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    const ciphertext = new Uint8Array(parts[2].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    
+    // WebCrypto expects the authTag appended to the ciphertext for AES-GCM
+    const combinedCipher = new Uint8Array(ciphertext.length + authTag.length);
+    combinedCipher.set(ciphertext);
+    combinedCipher.set(authTag, ciphertext.length);
+    
+    // Derive key using SHA-256 (matches Node.js crypto.createHash('sha256'))
+    const keyBytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(savedPass));
+    const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
+    
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: iv },
+      cryptoKey,
+      combinedCipher
+    );
+    
+    const decryptedText = new TextDecoder().decode(decryptedBuffer);
+    search_list = JSON.parse(decryptedText);
+    searchLoaded = true;
+    
   } catch (e) {
-    console.error("Failed to load search data", e);
+    console.error("Failed to load or decrypt search data", e);
+    const searchBtn = document.querySelector('#open-search-btn');
+    if (searchBtn) searchBtn.style.display = 'none';
   }
   return search_list;
 }
