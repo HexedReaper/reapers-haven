@@ -1,7 +1,7 @@
-// ..src/scripts/secure-vault.mjs
+// src/scripts/secure-vault.mjs
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 const PASSWORD = fs.readFileSync(path.resolve('.vaultpass'), 'utf8').trim();
 const TARGET_DIRS = ['dist'];
@@ -269,18 +269,13 @@ TARGET_DIRS.forEach((dir) => {
     const htmlFiles = getAllHtmlFiles(absolutePath);
     htmlFiles.forEach((file) => {
       try {
-        execSync(`npx pagecrypt "${file}" "${file}" "${PASSWORD}"`);
+        // Use execFileSync to prevent shell injection and shell history logging
+        execFileSync('npx', ['pagecrypt', file, file, PASSWORD], { stdio: 'pipe' });
 
         let encryptedHtml = fs.readFileSync(file, 'utf8');
         
-        // 1. Replace PageCrypt's black default <style> block with our seamless dark modal CSS
+        // 1. Replace PageCrypt's default style
         encryptedHtml = encryptedHtml.replace(/<style>[\s\S]*?<\/style>/, CUSTOM_STYLE);
-        
-        // 2. Inject the auto-login script before </body>
-        encryptedHtml = encryptedHtml.replace(
-          '</body>',
-          AUTO_LOGIN_SCRIPT + '\n</body>'
-        );
         
         fs.writeFileSync(file, encryptedHtml, 'utf8');
 
@@ -292,5 +287,11 @@ TARGET_DIRS.forEach((dir) => {
     });
   }
 });
+
+// const searchIndexPath = path.resolve('dist/search-index.json');
+// if (fs.existsSync(searchIndexPath)) {
+//   fs.unlinkSync(searchIndexPath);
+//   console.log('Deleted plaintext search-index.json from dist.');
+// }
 
 console.log(`Security layer applied successfully to ${secureCount} paths.`);

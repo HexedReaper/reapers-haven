@@ -272,7 +272,7 @@ document.querySelector('#search-results')?.addEventListener('click', (e) => {
 });
 
 // ===============================================================================
-// PAGE HIGHLIGHT — Highlight search terms when arriving from search results
+// PAGE HIGHLIGHT
 // ===============================================================================
 function getHighlightQuery() {
   // 1.check URL query params (primary source)
@@ -548,6 +548,7 @@ const handleSelectionEnd = (event) => {
       }
 
       const truncatedText = cachedSelectedText.length > 80 ? cachedSelectedText.substring(0, 80) + '...' : cachedSelectedText;
+      const safeTruncatedText = escapeHtml(truncatedText); // FIX: Prevent XSS
 
       panel.innerHTML = `
         <div class="panel-header">
@@ -556,7 +557,7 @@ const handleSelectionEnd = (event) => {
         </div>
         <div class="panel-preview">
           <span class="preview-label">SELECTED:</span>
-          <div class="preview-text">"${truncatedText}"</div>
+          <div class="preview-text">"${safeTruncatedText}"</div>
         </div>
         <div class="typo-action-row">
             <button class="typo-flag-btn active" data-type="typo">Typo</button>
@@ -595,7 +596,7 @@ const handleSelectionEnd = (event) => {
         btn.addEventListener('touchstart', handleBtnSelect);
       });
 
-      const handleFormSubmit = (submitEvent) => {
+            const handleFormSubmit = (submitEvent) => {
         submitEvent.stopPropagation();
         submitEvent.preventDefault();
 
@@ -606,6 +607,11 @@ const handleSelectionEnd = (event) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 6000);
 
+        // FIX: Strip query parameters to prevent leaking private search queries
+        const safeUrl = window.location.origin + window.location.pathname;
+
+        // Sending data to Cloudflare Worker. The Worker will encrypt it 
+        // with AES-256-GCM and commit it to private GitLab.
         fetch("https://reapers-haven-typo-proxy.kranych.workers.dev/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -613,7 +619,7 @@ const handleSelectionEnd = (event) => {
           body: JSON.stringify({
             text: cachedSelectedText,
             context: cachedContext,
-            url: window.location.href,
+            url: safeUrl,
             type: selectedType,
             note: noteArea.value || ''
           })
