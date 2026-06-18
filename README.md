@@ -42,7 +42,7 @@ Want to create your own encrypted vault of notes, to-do lists, and guides withou
 6. Deploy
     Your /dist folder is now a fully encrypted, client-side application. You can safely deploy this folder to Cloudflare Pages, GitHub Pages, Codeberg, or any other static host.
 
-## License & Usage
+# License & Usage
 This project and its underlying engine are licensed under the **[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0)**.
 
 **What this means:**
@@ -56,6 +56,15 @@ I require credit as the main developer of the project's core functions and base 
 You can fulfill this requirement by keeping the original LICENSE file intact and adding the following statement to your project's `README.md` and/or website footer:
 
 > *"Core vault engine, encryption pipeline, and original architecture developed by [HexedReaper](https://github.com/HexedReaper)."*
+
+## [⚠️] ZERO Liability & "As-Is" Disclaimer
+This engine is provided **strictly as-is**. By using, forking, or deploying this code, you accept 100% responsibility for your own data. 
+
+* **No Data Recovery:** If you encrypt your vault and lose your `.vaultpass`, your data is mathematically gone. I cannot help you. PageCrypt cannot help you. 
+* **No Tech Support:** I am not responsible for broken builds, misconfigured symlinks, or accidental deletions of your private repositories. 
+* **Zero Liability:** Under no circumstances will the author be held liable for any data loss, security breaches, server costs, or damages arising from the use of this engine. 
+
+**Back up your unencrypted `src/` files securely.** You have been warned. (ಠ_ಠ)
 
 
 # [!] Rules of the Haven (Code of Conduct)
@@ -83,3 +92,10 @@ You are highly encouraged to fork this and build your own Haven. However, if you
 
 ## 5. Be a Decent Human
 No harassment, no spamming, no toxic behavior in the issues tab. Keep it technical, keep it focused, and respect the FOSS spirit. (⌐■_■)
+
+
+# [♥] Acknowledgments & Credits
+This project stands on the shoulders of some incredible open-source tools:
+* **[Astro](https://astro.build/):** The blazingly fast static site generator powering the core build.
+* **[PageCrypt (by Greenheart)](https://github.com/Greenheart/pagecrypt):** The underlying AES-GCM client-side encryption tool that makes the "Vault" possible. Without Samuel Plumppu's CLI rewrite of PageCrypt, this automated pipeline would not exist.
+* **[Original PageCrypt](https://github.com/lupine-dev/PageCrypt):** The original browser-based encryption concept by Max Laumeister.
