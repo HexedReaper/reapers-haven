@@ -1,8 +1,8 @@
 # Reaper's Haven
 
-## A private collection and archive of FOSS apps, guides, bug fixes, and notes. [❖] Live (Encrypted): [reapers-haven.pages.dev](https://reapers-haven.pages.dev/)
+## A private collection and archive of FOSS apps, guides, bug fixes, and notes. (Encrypted): [reapers-haven.pages.dev](https://reapers-haven.pages.dev/)
 
-## [x] What does "Private" mean?
+## What does "Private" mean?
 This website's content is end-to-end encrypted before it is ever deployed. The content consists mostly of private logs, project tracking, bug fixes, and personal notes.
 Because the entire dist/ output is encrypted via PageCrypt, public access is not supported.
 
@@ -10,23 +10,20 @@ Because the entire dist/ output is encrypted via PageCrypt, public access is not
 This repository contains the core logic, Astro configuration, and automation scripts to build an encrypted static site. You can use this repository as an engine to create your own private notes website that only you have access to.
 The main code and automation features are hosted here on the main branch. The actual encrypted HTML files (the /dist folder) are strictly kept out of version control
 
-## (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Build Your Own Private Vault
-Want to create your own encrypted vault of notes, to-do lists, and guides without worrying about unauthorized access? Follow these steps:
+## (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Build Your Personal, Encrypted Digital Haven
+Looking for a way to stash your notes, tasks, and guides without third-party prying eyes? You’ve come to the right place. Here’s how you can spin up your own private vault.
 
-1. Fork and Clone
-    Fork this repository and clone it to your local machine.
-2. Set Up Your Content Directories - By default, the Astro site looks for markdown files in `src/content/goods` and `src/content/tutorials`.
-    To keep your private markdown files separate from the public site engine:
-        1. Create separate local git repositories for your content anywhere on your machine (e.g., `../my-private-goods`).
-        2. Symlink those private directories into the cloned Astro project:
+The Initial Setup:
+1. Fork and Clone: Start by forking this repo and getting a local copy running on your machine
+2. Organize Your Content: By default, the Astro engine scans src/content/goods and src/content/tutorials. To keep your sensitive data tucked away safely outside the public repository, try this:
+        1. Create separate, independent local git repositories for your content anywhere you like (e.g., ../my-private-vault).
+        2. Use a symbolic link to point the Astro project to your private folders:
             ```shell
             ln -s /path/to/your/private/goods ./src/content/goods
             ln -s /path/to/your/private/tutorials ./src/content/tutorials
             ```
-3. Create Your Vault Password
-    You need to set the password that will lock your website.
-    Create a file named `.vaultpass` in the root of the project and paste your desired password inside it.
-    [!] (ಠ_ಠ) CRITICAL: Ensure `.vaultpass` is in your `.gitignore` so you do not accidentally publish your password to GitHub!
+3. Lock It Down: Define your access credentials by creating a file named `.vaultpass` in the project root. Drop your password right into that file.
+    (ಠ_ಠ) Security Check: Immediately make sure `.vaultpass` is included in your `.gitignore` file. You definitely don’t want to accidentally push your password to a public GitHub repo!
 4. Build the Site
     Whenever you make changes to your private markdown files, the internal `goods-tracker.js` will automatically generate a `src/data/goods-history.json` file for your Updates tracker page.
     To build the site, run:
@@ -42,60 +39,58 @@ Want to create your own encrypted vault of notes, to-do lists, and guides withou
 6. Deploy
     Your /dist folder is now a fully encrypted, client-side application. You can safely deploy this folder to Cloudflare Pages, GitHub Pages, Codeberg, or any other static host.
 
-# License & Usage
-This project and its underlying engine are licensed under the **[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0)**.
+# License & Usage Terms
+This engine operates under the **[CC BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0)**. Here is breakdown:
 
 **What this means:**
-* **[✓] Share & Adapt:** You are free to fork, copy, and modify this repository to build your own private vault.
-* **[✓] ShareAlike (Stays Open):** If you alter, build upon, or distribute this framework, you MUST release your version under this exact same license. You cannot make your modified engine closed-source.
-* **[✗] NO Monetization (NonCommercial):** You may NOT use this code, layout, or logic for commercial purposes. This explicitly forbids selling the template, placing advertisements, locking features behind paywalls, or accepting donations based on this codebase. 
-
-**[!] Mandatory Attribution Requirement:**
-I require credit as the main developer of the project's core functions and base engine. If you fork, modify, or use this repository to build your own vault, you are legally required to provide visible credit.
-
-You can fulfill this requirement by keeping the original LICENSE file intact and adding the following statement to your project's `README.md` and/or website footer:
+- Adaptable
+    Feel free to fork, hack, and modify this to perfectly suit your vault needs.
+- Keep it Open
+    If you share or build upon this, your version must remain under same license. No closing source code.
+- Non-Commercial Only
+    This is strictly for personal use. Selling template, injecting ads, paywalling content, or soliciting donations based on this code is strictly prohibited.
+- **Mandatory Attribution Requirement**
+    I require credit as the main developer of projects core functions and base engine. If you fork, modify, or use this repository to build your own vault, you are legally required to provide visible credit.
+    You can fulfill this requirement by keeping original LICENSE file intact and adding following statement to your project's `README.md` and/or website footer:
 
 > *"Core vault engine, encryption pipeline, and original architecture developed by [HexedReaper](https://github.com/HexedReaper)."*
 
-## [⚠️] ZERO Liability & "As-Is" Disclaimer
+## ZERO Liability & "As-Is" Disclaimer
 This engine is provided **strictly as-is**. By using, forking, or deploying this code, you accept 100% responsibility for your own data. 
 
-* **No Data Recovery:** If you encrypt your vault and lose your `.vaultpass`, your data is mathematically gone. I cannot help you. PageCrypt cannot help you. 
+* **No Data Recovery:** If you encrypt your vault and lose your `.vaultpass`, your data is gone. I cannot help you. PageCrypt cannot help you. 
 * **No Tech Support:** I am not responsible for broken builds, misconfigured symlinks, or accidental deletions of your private repositories. 
-* **Zero Liability:** Under no circumstances will the author be held liable for any data loss, security breaches, server costs, or damages arising from the use of this engine. 
+* **Zero Liability:** Under no circumstances will the author be held liable for any data loss, security breaches, server costs, or damages arising from use of this engine. 
 
 **Back up your unencrypted `src/` files securely.** You have been warned. (ಠ_ಠ)
 
 
-# [!] Rules of the Haven (Code of Conduct)
+# Disclaimers & Community Code
+This repository is the engine for a private, encrypted vault. By interacting with this project - whether through issues, pull requests, or forks—you agree to abide by these rules:
 
-This repository provides the engine for a strictly private, encrypted vault. If you are interacting with this repository (opening issues, submitting pull requests, or forking), you are expected to follow these fundamental rules. 
+## 1. NO Corporate/Monetization BS
+This is passion project built strictly on FOSS principles. Dont open issues requesting monetization methods and dont submit pull requests that introduce telemetry, tracking, paywalls, or "premium" features. Any attempts to commercialize this engine will be rejected, and asociated user will be blocked. Refer to LICENSE for details.
 
-## 1. [✗] NO Corporate/Monetization BS
-This is a passion project built on the FOSS ethos. 
-Do not open issues asking how to monetize this. Do not submit pull requests that add telemetry, ad-tracking, paywalls, or "premium" features. Any attempt to commercialize this engine will be immediately rejected and the user blocked. Read the `LICENSE`.
+## 2. Respect Privacy Context
+The live deployment of Reaper's Haven is end-to-end encrypted by design. To maintain this integrity:
+* Do not request the vault password.
+* Do not solicit access to my private, personal collections.
+* Do not submit PRs that attempt to weaken or bypass PageCrypt security pipeline.
 
-## 2. [🔒] Respect Privacy Context
-The live version of Reaper's Haven is end-to-end encrypted for a reason. 
-* Do **not** open issues asking for the vault password.
-* Do **not** ask for access to my personal private collections.
-* Do **not** submit PRs attempting to bypass or weaken the PageCrypt security pipeline.
+## 3. Contributing to the Core
+We welcome contributions that improve the engine's performance or security. If you find ways to optimize Astro build, make better encryption script, or enhance search efficiency, feel free to contribute:
+* Ensure your code is clean and well-documented.
+* Provide a clear explanation of why your PR improves core architecture.
+* Note that all contributions are subject to projects CC BY-NC-SA 4.0 license.
 
-## 3. [✓] Core Engine Contributions are Welcome
-If you have a way to make the Astro build faster, the encryption script more secure, or the search script more efficient—we want it! (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
-* Keep your code clean.
-* Explain *why* your PR improves the base engine.
-* Understand that any code you contribute will be bound by the same **CC BY-NC-SA 4.0** license.
+## 4. Forking & Personal Responsibility
+You are encouraged to fork this project to build your own Haven. However, please understand that I am not responsible for troubleshooting your custom setups. Support is limited strictly to core engine architecture - if your build fails due to modifications in your private markdown files or local configuration, that falls under your own management.
 
-## 4. [❖] Forking & Independence
-You are highly encouraged to fork this and build your own Haven. However, if your build breaks because of something you added to your private markdown files, that is on you. Support is only provided for the core engine architecture, not for your personal vault management.
+## 5. Community Conduct
+Keep all interactions in issues tab focused, technical, and constructive. Harassment, spam, and toxic behavior are not tolerated. Let’s respect FOSS and keep project environment healthy and productive.
 
-## 5. Be a Decent Human
-No harassment, no spamming, no toxic behavior in the issues tab. Keep it technical, keep it focused, and respect the FOSS spirit. (⌐■_■)
-
-
-# [♥] Acknowledgments & Credits
-This project stands on the shoulders of some incredible open-source tools:
-* **[Astro](https://astro.build/):** The blazingly fast static site generator powering the core build.
-* **[PageCrypt (by Greenheart)](https://github.com/Greenheart/pagecrypt):** The underlying AES-GCM client-side encryption tool that makes the "Vault" possible. Without Samuel Plumppu's CLI rewrite of PageCrypt, this automated pipeline would not exist.
-* **[Original PageCrypt](https://github.com/lupine-dev/PageCrypt):** The original browser-based encryption concept by Max Laumeister.
+# ♥ Acknowledgments & Credits
+This project stands on shoulders of some incredible open-source tools:
+* **[Astro](https://astro.build/):** Powers the core build, providing speed and flexibility needed for static site engine.
+* **[PageCrypt (by Greenheart)](https://github.com/Greenheart/pagecrypt):** Provides essential client-side AES-GCM encryption that makes "Vault" functionality possible. This project wouldn't have this level of automated piping without Samuel Plumppu’s specialized CLI rewrite.
+* **[Original PageCrypt](https://github.com/lupine-dev/PageCrypt):** Acknowledgment goes to Max Laumeister for pioneering original browser-based encryption concept that laid groundwork for this approach
