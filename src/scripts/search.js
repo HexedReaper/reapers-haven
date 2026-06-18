@@ -1,3 +1,4 @@
+// ../src/scripts/search.js
 //grab list lazily from API
 const search_modal = document.querySelector('#search-modal');
 const base = search_modal?.dataset.base || '/';
@@ -94,6 +95,59 @@ const searcbox = document.querySelector('#search-input');
 const result_count = document.querySelector('#result-count');
 
 // ===============================================================================
+// URL NORMALIZATION
+// ===============================================================================
+function normalizeSearchUrl(rawUrl) {
+  let url = (rawUrl || '').trim();
+
+  //strip query and hash. add owm ?highlight= later
+  url = url.split('?')[0].split('#')[0];
+
+  //handle full URLs: https://reapers-haven.pages.dev/tutorials/... → /tutorials/...
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      url = new URL(url).pathname;
+    } catch (e) {
+      url = url.replace(/^https?:\/\//, '');
+      const slashIdx = url.indexOf('/');
+      url = slashIdx !== -1 ? url.substring(slashIdx) : '/' + url;
+    }
+  }
+
+  //handle leading //
+  if (url.startsWith('//')) {
+    const afterSlashes = url.substring(2);
+    const firstSegment = afterSlashes.split('/')[0];
+    if (firstSegment.includes('.')) {
+      const slashIdx = afterSlashes.indexOf('/');
+      url = slashIdx !== -1 ? afterSlashes.substring(slashIdx) : '/';
+    } else {
+      //double-slash bug — just collapse to single slash
+      url = '/' + afterSlashes;
+    }
+  }
+
+  //ensure leading slash (root-relative)
+  if (!url.startsWith('/')) {
+    url = '/' + url;
+  }
+
+  //if deployed at a subpath (base ≠ '/'), prefix it
+  if (base !== '/' && !url.startsWith(base)) {
+    const cleanBase = base.replace(/\/+$/, '');
+    url = cleanBase + url;
+  }
+
+  //ensure trailing slash for directory-style URLs (no file extension).
+  //without this, server redirects /path → /path/ and drops ?highlight=
+  if (!/\.\w+$/.test(url)) {
+    url = url.replace(/\/?$/, '/');
+  }
+
+  return url;
+}
+
+// ===============================================================================
 // SEARCH INPUT HANDLER (Debounced)
 // ===============================================================================
 const handleSearchInput = async (event) => {
@@ -131,21 +185,26 @@ const handleSearchInput = async (event) => {
     const snippets = getSnippets(element.content, query);
     const collection = element.url.includes('/tutorials/') ? 'tutorial' : 'goods';
 
-    let secureUrl = element.url;
-    if (!secureUrl.startsWith('http') && !secureUrl.startsWith('/')) {
-      secureUrl = '/' + secureUrl; // Force root-relative URL
-    }
-    const highlightUrl = secureUrl + (secureUrl.includes('?') ? '&' : '?') + 'highlight=' + encodeURIComponent(query);
+    const secureUrl = normalizeSearchUrl(element.url);
+    const highlightUrl = secureUrl + '?highlight=' + encodeURIComponent(query);
 
     const li = document.createElement('li');
     li.className = 'search-result-item';
 
     const headerDiv = document.createElement('div');
     headerDiv.className = 'result-header';
-    headerDiv.innerHTML = `
-      <span class="result-badge badge-${collection}">${collection}</span>
-      <a href="${highlightUrl}" class="result-title">${escapeHtml(element.title)}</a>
-    `;
+
+    const badge = document.createElement('span');
+    badge.className = `result-badge badge-${collection}`;
+    badge.textContent = collection;
+    headerDiv.appendChild(badge);
+
+    const link = document.createElement('a');
+    link.href = highlightUrl;
+    link.className = 'result-title';
+    link.textContent = element.title;
+    headerDiv.appendChild(link);
+
     li.appendChild(headerDiv);
 
     if (snippets.length > 0) {
@@ -205,7 +264,6 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-// Close modal when clicking a result link
 document.querySelector('#search-results')?.addEventListener('click', (e) => {
   const link = e.target.closest('a');
   if (link) {
@@ -214,77 +272,175 @@ document.querySelector('#search-results')?.addEventListener('click', (e) => {
 });
 
 // ===============================================================================
-// PAGE HIGHLIGHT - Highlight search terms when arriving from search results
+// PAGE HIGHLIGHT — Highlight search terms when arriving from search results
 // ===============================================================================
+function getHighlightQuery() {
+  // 1.check URL query params (primary source)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const val = params.get('highlight');
+    if (val) return val;
+  } catch (_) { /* URLSearchParams unsupported */ }
+
+  // 2. Fallback: manual URL parse (older Android WebViews)
+  try {
+    const match = window.location.search.match(/[?&]highlight=([^&]+)/);
+    if (match) return decodeURIComponent(match[1]);
+  } catch (_) { /* malformed */ }
+
+  // 3.Fallback: sessionStorage (preserved by AUTO_LOGIN_SCRIPT across PageCrypts document.write() decryption)
+  try {
+    const stored = sessionStorage.getItem('rh_highlight_query');
+    if (stored) return stored;
+  } catch (_) { /* sessionStorage unavailable */ }
+
+  return null;
+}
+
 function highlightSearchTermOnPage() {
-  const params = new URLSearchParams(window.location.search);
-  const highlightQuery = params.get('highlight');
-  if (!highlightQuery) return;
+  const highlightQuery = getHighlightQuery();
+  if (!highlightQuery) {
+    //no query => clear any stale sessionStorage
+    try { sessionStorage.removeItem('rh_highlight_query'); } catch(_) {}
+    return;
+  }
 
-  // Clean URL
-  window.history.replaceState({}, '', window.location.pathname);
+  //persist to sessionStorage immediately so it survives document.write()
+  try { sessionStorage.setItem('rh_highlight_query', highlightQuery); } catch(_) {}
 
-  const container = document.querySelector('.main-content') || document.querySelector('.goods-content') || document.body;
-  let firstMark = null;
+  let highlightDone = false;
+  let observer = null;
 
-  function processTextNodes(element) {
-    const childNodes = Array.from(element.childNodes);
-    for (const child of childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        const text = child.textContent;
-        const lowerText = text.toLowerCase();
-        const lowerQuery = highlightQuery.toLowerCase();
+  function doHighlight() {
+    if (highlightDone) return;
 
-        if (!lowerText.includes(lowerQuery)) continue;
+    //if PageCrypt password form is still visible, wait for decryption
+    if (document.querySelector('input[type="password"]') || document.getElementById('pwd')) {
+      return; //mutationObserver will retry when the form disappears
+    }
 
-        const fragment = document.createDocumentFragment();
-        let lastIndex = 0;
-        let searchIndex = 0;
-        let matchCount = 0;
-        const maxMatches = 20;
+    const container = document.querySelector('.main-content') ||
+                      document.querySelector('.goods-content') ||
+                      document.body;
+    if (!container) return;
 
-        while (matchCount < maxMatches) {
-          const idx = lowerText.indexOf(lowerQuery, searchIndex);
-          if (idx === -1) break;
+    let firstMark = null;
+    let matchCount = 0;
+    const maxMatches = 30;
 
-          if (idx > lastIndex) {
-            fragment.appendChild(document.createTextNode(text.substring(lastIndex, idx)));
+    function processTextNodes(element) {
+      const childNodes = Array.from(element.childNodes);
+      for (const child of childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+          const text = child.textContent;
+          const lowerText = text.toLowerCase();
+          const lowerQuery = highlightQuery.toLowerCase();
+
+          if (!lowerText.includes(lowerQuery)) continue;
+
+          const fragment = document.createDocumentFragment();
+          let lastIndex = 0;
+          let searchIndex = 0;
+
+          while (matchCount < maxMatches) {
+            const idx = lowerText.indexOf(lowerQuery, searchIndex);
+            if (idx === -1) break;
+
+            if (idx > lastIndex) {
+              fragment.appendChild(document.createTextNode(text.substring(lastIndex, idx)));
+            }
+
+            const mark = document.createElement('mark');
+            mark.className = 'search-destination-highlight';
+            mark.textContent = text.substring(idx, idx + highlightQuery.length);
+            fragment.appendChild(mark);
+
+            if (!firstMark) firstMark = mark;
+            lastIndex = idx + highlightQuery.length;
+            searchIndex = lastIndex;
+            matchCount++;
           }
 
-          const mark = document.createElement('mark');
-          mark.className = 'search-destination-highlight';
-          mark.textContent = text.substring(idx, idx + highlightQuery.length);
-          fragment.appendChild(mark);
+          if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+          }
 
-          if (!firstMark) firstMark = mark;
-          lastIndex = idx + highlightQuery.length;
-          searchIndex = lastIndex;
-          matchCount++;
-        }
-
-        if (lastIndex < text.length) {
-          fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-        }
-
-        child.parentNode.replaceChild(fragment, child);
-      } else if (child.nodeType === Node.ELEMENT_NODE) {
-        const tag = child.tagName;
-        if (tag !== 'SCRIPT' && tag !== 'STYLE' && tag !== 'MARK' &&
-            tag !== 'TEXTAREA' && tag !== 'INPUT' && tag !== 'CODE' &&
-            tag !== 'PRE') {
-          processTextNodes(child);
+          child.parentNode.replaceChild(fragment, child);
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+          const tag = child.tagName;
+          if (tag !== 'SCRIPT' && tag !== 'STYLE' && tag !== 'MARK' &&
+              tag !== 'TEXTAREA' && tag !== 'INPUT' && tag !== 'CODE' &&
+              tag !== 'PRE') {
+            processTextNodes(child);
+          }
         }
       }
     }
+
+    processTextNodes(container);
+
+    if (firstMark) {
+      highlightDone = true;
+      if (observer) {
+        try { observer.disconnect(); } catch(_) {}
+      }
+
+      //scroll to first match. robust fallback chain for Android
+      setTimeout(() => {
+        try {
+          if (typeof firstMark.scrollIntoView === 'function') {
+            firstMark.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+          }
+        } catch (_) {
+          try {
+            firstMark.scrollIntoView(false);
+          } catch (_2) {
+            const y = firstMark.getBoundingClientRect().top + window.pageYOffset - (window.innerHeight / 2);
+            window.scrollTo(0, Math.max(0, y));
+          }
+        }
+      }, 500);
+    }
+
+    //clean URL and sessionStorage ONLY after highlighting attempt
+    //(not before -the query must survive PageCrypt's document.write)
+    try { window.history.replaceState({}, '', window.location.pathname); } catch(_) {}
+    try { sessionStorage.removeItem('rh_highlight_query'); } catch(_) {}
   }
 
-  processTextNodes(container);
+  //longer initial delay on mobile for render pipeline
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  setTimeout(doHighlight, isMobile ? 400 : 200);
 
-  if (firstMark) {
-    setTimeout(() => {
-      firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }
+  //catches content that loads after initial DOM
+  //(Astro islands, PageCrypt decryption revealing the real content, etc.)
+  observer = new MutationObserver((mutations, obs) => {
+    if (highlightDone) {
+      obs.disconnect();
+      return;
+    }
+    for (const mutation of mutations) {
+      if (mutation.addedNodes.length > 0) {
+        //small delay to let the new DOM settle
+        setTimeout(doHighlight, 200);
+        break;
+      }
+    }
+  });
+
+  try {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } catch(_) { /* MutationObserver unsupported */ }
+
+  // Hard stop after 10 seconds
+  setTimeout(() => {
+    if (observer) {
+      try { observer.disconnect(); } catch(_) {}
+    }
+    if (!highlightDone) {
+      doHighlight(); // one last try
+    }
+  }, 10000);
 }
 
 if (document.readyState === 'loading') {
