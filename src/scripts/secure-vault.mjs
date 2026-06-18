@@ -1,4 +1,4 @@
-// src/scripts/secure-vault.mjs
+// ..src/scripts/secure-vault.mjs
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -24,7 +24,7 @@ html,body{
 .box{
   max-width:380px;
   width:calc(100% - 2rem);
-  background:rgb(38, 39, 57); /* Slightly lighter for the modal box */
+  background:rgb(38, 39, 57);
   border:1px solid rgba(192, 251, 226, 0.15);
   border-radius:8px;
   padding:2rem;
@@ -100,70 +100,146 @@ header{
 </style>
 `;
 
+// =====================================================================
+// AUTO-LOGIN SCRIPT
+// =====================================================================
 const AUTO_LOGIN_SCRIPT = `
 <script data-astro-rerun>
 (function() {
-  const STORAGE_KEY = 'reapers_haven_vault_token';
-  let unlockTried = false;
+  var STORAGE_KEY = 'reapers_haven_vault_token';
 
-  function init() {
-    if (unlockTried) return;
+  // ============================================================
+  // 1. Preserve ?highlight= in sessionStorage BEFORE PageCrypts
+  // document.write() can destroy it. sessionStorage persists
+  // across document.open()/write()/close() within the same tab.
+  // ============================================================
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var hl = params.get('highlight');
+    if (hl) sessionStorage.setItem('rh_highlight_query', hl);
+  } catch(e) {
+    try {
+      var m = window.location.search.match(/[?&]highlight=([^&]+)/);
+      if (m) sessionStorage.setItem('rh_highlight_query', decodeURIComponent(m[1]));
+    } catch(e2) {}
+  }
+
+  // ============================================================
+  // 2. Auto-unlock
+  // ============================================================
+  var unlockTried = false;
+
+  function attemptUnlock(passInput) {
+    if (unlockTried || !passInput) return;
     unlockTried = true;
 
-    // CRITICAL FIX: PageCrypt caches the derived AES key in sessionStorage ('k').
-    // Because each page uses a unique salt, this cached key from a previous page
-    // is invalid and causes a decryption failure. We must clear it before
-    // PageCrypt's DOMContentLoaded listener tries to use it.
+    //clear PageCrypt's cached AES key. stale keys break rederivation
     sessionStorage.removeItem('k');
 
-    const passInput = document.querySelector('input[type="password"]');
-    if (!passInput) return;
-
-    // 1. Self-correcting save: store password as user types it manually
-    passInput.addEventListener('input', () => {
-      if (passInput.value.trim()) {
-        localStorage.setItem(STORAGE_KEY, passInput.value);
-      }
-    });
-
-    // 2. Auto-login if a saved password exists
-    const savedPass = localStorage.getItem(STORAGE_KEY);
+    var savedPass = localStorage.getItem(STORAGE_KEY);
     if (!savedPass) return;
 
-    // Use the native setter so any framework/listener overhead is bypassed
-    const nativeSetter = Object.getOwnPropertyDescriptor(
+    //use native setter to bypass React/Astro input wrappers
+    var nativeSetter = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype, 'value'
     ).set;
     nativeSetter.call(passInput, savedPass);
 
-    // Dispatch every event type PageCrypt might be listening for
     passInput.dispatchEvent(new Event('input',  { bubbles: true }));
     passInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    // 3. If DOMContentLoaded hasn't fired yet, PageCrypt will see the injected
-    // password and submit automatically. We only need to manually submit
-    // if the DOM is already completely loaded (e.g., Astro View Transitions).
-    if (document.readyState === 'complete') {
-      const form = passInput.closest('form');
-      const submitBtn = document.querySelector('button[type="submit"], input[type="submit"]') || document.querySelector('button');
-      function doSubmit() {
-        if (form && typeof form.requestSubmit === 'function') {
-          form.requestSubmit();
-        } else if (form) {
-          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-        } else if (submitBtn) {
-          submitBtn.click();
-        }
+    function doSubmit() {
+      var form = passInput.closest('form');
+      var submitBtn = document.querySelector('button[type="submit"], input[type="submit"]') || document.querySelector('button');
+      if (form && typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else if (form) {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      } else if (submitBtn) {
+        submitBtn.click();
       }
-      // Give PageCrypt's decryption engine a tiny moment to attach listeners
-      setTimeout(doSubmit, 50);
     }
+
+    setTimeout(doSubmit, 50);
+
+    //After auto-login, check for "wrong password" error
+    //If decryption succeeds, document.write() destroys this context before the timeout fires.
+    //If decryption fails, PageCrypt shows #msg.red, and clean up
+    setTimeout(function() {
+      var msgEl = document.getElementById('msg');
+      if (msgEl && msgEl.classList.contains('red')) {
+        localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem('k');
+        unlockTried = false;
+      }
+    }, 1500);
+  }
+
+  // ============================================================
+  // 3. Save password to localStorage so auto-login works next time.
+  // listen on the 'input' event (fires on every keystroke)
+  // because PageCrypt's submit handler may call document.write()
+  // before the submit listener fires, destroying the handler.
+  // By saving on input, the password is in localStorage before
+  // user ever clicks Submit.
+  // ============================================================
+  function setupPasswordSaving() {
+    var passInput = document.querySelector('input[type="password"]');
+    if (!passInput) return;
+
+    passInput.addEventListener('input', function() {
+      if (passInput.value) {
+        localStorage.setItem(STORAGE_KEY, passInput.value);
+      }
+    });
+
+    // Belt-and-suspenders: also save on form submit if it fires
+    var form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', function() {
+        if (passInput.value) {
+          localStorage.setItem(STORAGE_KEY, passInput.value);
+        }
+      });
+    }
+  }
+
+  // ============================================================
+  // 4. Init
+  // ============================================================
+  function init() {
+    setupPasswordSaving();
+
+    var savedPass = localStorage.getItem(STORAGE_KEY);
+    if (!savedPass) return;
+
+    // Check if password input already exists
+    var existingInput = document.querySelector('input[type="password"]');
+    if (existingInput) {
+      attemptUnlock(existingInput);
+      return;
+    }
+
+    //wait for PageCrypt to inject the input
+    var observer = new MutationObserver(function(mutations, obs) {
+      var passInput = document.querySelector('input[type="password"]');
+      if (passInput) {
+        obs.disconnect();
+        attemptUnlock(passInput);
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    setTimeout(function() { observer.disconnect(); }, 5000);
   }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    // DOM already parsed (script is at the end of body)
     init();
   }
 })();
