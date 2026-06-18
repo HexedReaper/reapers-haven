@@ -2,6 +2,3 @@
 
 ## Website:
 https://reapers-haven.pages.dev
-
-## Contribute
-contribution is temporarily impossible!
