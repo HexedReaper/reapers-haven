@@ -131,8 +131,10 @@ const handleSearchInput = async (event) => {
     const snippets = getSnippets(element.content, query);
     const collection = element.url.includes('/tutorials/') ? 'tutorial' : 'goods';
 
-    const secureUrl = (element.url.startsWith('http://') || element.url.startsWith('https://') || element.url.startsWith('/'))
-      ? element.url : '#';
+    let secureUrl = element.url;
+    if (!secureUrl.startsWith('http') && !secureUrl.startsWith('/')) {
+      secureUrl = '/' + secureUrl; // Force root-relative URL
+    }
     const highlightUrl = secureUrl + (secureUrl.includes('?') ? '&' : '?') + 'highlight=' + encodeURIComponent(query);
 
     const li = document.createElement('li');
