@@ -1,3 +1,4 @@
+// ../src/pages/search-index.json.ts
 import type { APIRoute } from 'astro';
 import { getCollection } from 'astro:content';
 
