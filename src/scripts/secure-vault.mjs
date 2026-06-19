@@ -137,7 +137,8 @@ const AUTO_LOGIN_SCRIPT = `
     //clear PageCrypt's cached AES key. stale keys break rederivation
     sessionStorage.removeItem('k');
 
-    var savedPass = localStorage.getItem(STORAGE_KEY);
+    //Read from sessionStorage instead of localStorage
+    var savedPass = sessionStorage.getItem(STORAGE_KEY);
     if (!savedPass) return;
 
     //use native setter to bypass React/Astro input wrappers
@@ -169,20 +170,16 @@ const AUTO_LOGIN_SCRIPT = `
     setTimeout(function() {
       var msgEl = document.getElementById('msg');
       if (msgEl && msgEl.classList.contains('red')) {
-        localStorage.removeItem(STORAGE_KEY);
+        // Clean up sessionStorage on failure
+        sessionStorage.removeItem(STORAGE_KEY);
         sessionStorage.removeItem('k');
         unlockTried = false;
       }
     }, 1500);
   }
-
   // ============================================================
-  // 3. Save password to localStorage so auto-login works next time.
+  // 3. Save password to sessionStorage so auto-login works next time.
   // listen on the 'input' event (fires on every keystroke)
-  // because PageCrypt's submit handler may call document.write()
-  // before the submit listener fires, destroying the handler.
-  // By saving on input, the password is in localStorage before
-  // user ever clicks Submit.
   // ============================================================
   function setupPasswordSaving() {
     var passInput = document.querySelector('input[type="password"]');
@@ -190,7 +187,8 @@ const AUTO_LOGIN_SCRIPT = `
 
     passInput.addEventListener('input', function() {
       if (passInput.value) {
-        localStorage.setItem(STORAGE_KEY, passInput.value);
+        //Save to sessionStorage instead of localStorage
+        sessionStorage.setItem(STORAGE_KEY, passInput.value);
       }
     });
 
@@ -199,7 +197,7 @@ const AUTO_LOGIN_SCRIPT = `
     if (form) {
       form.addEventListener('submit', function() {
         if (passInput.value) {
-          localStorage.setItem(STORAGE_KEY, passInput.value);
+          sessionStorage.setItem(STORAGE_KEY, passInput.value);
         }
       });
     }
@@ -211,7 +209,7 @@ const AUTO_LOGIN_SCRIPT = `
   function init() {
     setupPasswordSaving();
 
-    var savedPass = localStorage.getItem(STORAGE_KEY);
+    var savedPass = sessionStorage.getItem(STORAGE_KEY);
     if (!savedPass) return;
 
     // Check if password input already exists
@@ -296,28 +294,31 @@ TARGET_DIRS.forEach((dir) => {
 });
 
 // =====================================================================
-// ENCRYPT SEARCH INDEX
+// ENCRYPT SEARCH INDEX (PBKDF2)
 // =====================================================================
 const searchIndexPath = path.resolve('dist/search-index.json');
 if (fs.existsSync(searchIndexPath)) {
   try {
     const plaintext = fs.readFileSync(searchIndexPath, 'utf8');
     
-    //derive a 256-bit key from the password using SHA-256
-    const key = crypto.createHash('sha256').update(PASSWORD).digest();
-    const iv = crypto.randomBytes(12); // 12 bytes is standard for AES-GCM
+    // 1. Generate a random salt for PBKDF2
+    const salt = crypto.randomBytes(16);
+    // 2. Derive key using PBKDF2 (600,000 iterations)
+    const key = crypto.pbkdf2Sync(PASSWORD, salt, 600000, 32, 'sha256');
+    
+    const iv = crypto.randomBytes(12); 
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
     
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
     
-    //format: iv:authTag:ciphertext
-    const payload = iv.toString('hex') + ':' + authTag + ':' + encrypted;
+    //format: salt:iv:authTag:ciphertext
+    const payload = salt.toString('hex') + ':' + iv.toString('hex') + ':' + authTag + ':' + encrypted;
     
     fs.writeFileSync(path.resolve('dist/search-index.enc'), payload);
-    fs.unlinkSync(searchIndexPath); //destroy the plaintext version
-    console.log('🔐 Encrypted search-index.json to search-index.enc');
+    fs.unlinkSync(searchIndexPath); 
+    console.log('Encrypted search-index.json to search-index.enc (PBKDF2)');
   } catch (err) {
     console.error('Failed to encrypt search index:', err.message);
   }

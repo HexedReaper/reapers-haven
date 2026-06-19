@@ -11,9 +11,10 @@ const STORAGE_KEY = 'reapers_haven_vault_token';
 async function loadSearchData() {
   if (searchLoaded) return search_list;
   
-  const savedPass = localStorage.getItem(STORAGE_KEY);
+  // Read from sessionStorage instead of localStorage
+  const savedPass = sessionStorage.getItem(STORAGE_KEY);
   if (!savedPass) {
-    console.error("Vault password not found in local storage. Search disabled.");
+    console.error("Vault password not found in session. Search disabled.");
     const searchBtn = document.querySelector('#open-search-btn');
     if (searchBtn) searchBtn.style.display = 'none';
     return search_list;
@@ -31,20 +32,28 @@ async function loadSearchData() {
     
     const payload = await res.text();
     const parts = payload.split(':');
-    if (parts.length !== 3) throw new Error("Invalid payload format");
+    if (parts.length !== 4) throw new Error("Invalid payload format");
     
-    const iv = new Uint8Array(parts[0].match(/.{1,2}/g).map(b => parseInt(b, 16)));
-    const authTag = new Uint8Array(parts[1].match(/.{1,2}/g).map(b => parseInt(b, 16)));
-    const ciphertext = new Uint8Array(parts[2].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    const salt = new Uint8Array(parts[0].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    const iv = new Uint8Array(parts[1].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    const authTag = new Uint8Array(parts[2].match(/.{1,2}/g).map(b => parseInt(b, 16)));
+    const ciphertext = new Uint8Array(parts[3].match(/.{1,2}/g).map(b => parseInt(b, 16)));
     
     // WebCrypto expects the authTag appended to the ciphertext for AES-GCM
     const combinedCipher = new Uint8Array(ciphertext.length + authTag.length);
     combinedCipher.set(ciphertext);
     combinedCipher.set(authTag, ciphertext.length);
     
-    // Derive key using SHA-256 (matches Node.js crypto.createHash('sha256'))
-    const keyBytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(savedPass));
-    const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['decrypt']);
+    // Use PBKDF2 to derive the key in the browser
+    const enc = new TextEncoder();
+    const baseKey = await crypto.subtle.importKey('raw', enc.encode(savedPass), { name: 'PBKDF2' }, false, ['deriveKey']);
+    const cryptoKey = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
     
     const decryptedBuffer = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: iv },
@@ -269,9 +278,23 @@ const handleSearchInput = async (event) => {
 
         const snippetP = document.createElement('p');
         snippetP.className = 'snippet-text';
-        snippetP.innerHTML = highlightSnippet(snippet.text, query);
-        snippetDiv.appendChild(snippetP);
+        // XSS-safe DOM manipulation:
+        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        const parts = snippet.text.split(regex);
 
+        parts.forEach(part => {
+          if (regex.test(part)) {
+            regex.lastIndex = 0; // Reset regex index for global flag
+            const mark = document.createElement('mark');
+            mark.className = 'search-snippet-highlight';
+            mark.textContent = part; // Safe from XSS
+            snippetP.appendChild(mark);
+          } else if (part) {
+            snippetP.appendChild(document.createTextNode(part)); // Safe from XSS
+          }
+        });
+        snippetDiv.appendChild(snippetP);
         contextDiv.appendChild(snippetDiv);
       });
 
@@ -641,7 +664,7 @@ const handleSelectionEnd = (event) => {
         btn.addEventListener('touchstart', handleBtnSelect);
       });
 
-            const handleFormSubmit = (submitEvent) => {
+        const handleFormSubmit = (submitEvent) => {
         submitEvent.stopPropagation();
         submitEvent.preventDefault();
 
@@ -676,6 +699,11 @@ const handleSelectionEnd = (event) => {
             panel.classList.remove('panel-sending');
             panel.classList.add('panel-success');
             setTimeout(clearReportingUI, 1500);
+          } else if (res.status === 503) {
+            //reporter is disabled on the server, hiding UI
+            document.querySelectorAll('.typo-indicator-trigger, #toggle-telemetry-btn')
+              .forEach(el => el.style.display = 'none');
+            clearReportingUI();
           } else {
             submitBtn.innerText = 'ERR: REFUSAL';
             panel.classList.remove('panel-sending');
