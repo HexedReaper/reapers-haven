@@ -6,6 +6,10 @@ export default defineConfig({
   base: '/',
   outDir: './dist',
   vite: {
-    plugins: [viteSingleFile()]
+    plugins: [viteSingleFile()],
+    define: {
+      // If env var is missing, fallback to my worker URL so my build doesn't break
+      'import.meta.env.VAULT_REPORT_URL': JSON.stringify(process.env.VAULT_REPORT_URL || 'https://reapers-haven-typo-proxy.kranych.workers.dev/')
+    }
   }
 });
