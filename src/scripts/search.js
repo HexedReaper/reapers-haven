@@ -680,7 +680,8 @@ const handleSelectionEnd = (event) => {
 
         // Sending data to Cloudflare Worker. The Worker will encrypt it 
         // with AES-256-GCM and commit it to private GitLab.
-        fetch("https://reapers-haven-typo-proxy.kranych.workers.dev/", {
+        const REPORT_URL = import.meta.env.VAULT_REPORT_URL || 'https://reapers-haven-typo-proxy.kranych.workers.dev/';
+        fetch(REPORT_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
