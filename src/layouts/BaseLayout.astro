@@ -34,9 +34,9 @@ function getRandomKaomoji(category) {
         }
 
         <a href={`${base}/`} class={Astro.url.pathname === `${base}/` ? 'active-nav-link' : ''}>[home]</a>
-        <a href={`${base}/tutorials`} class={Astro.url.pathname.startsWith(`${base}/tutorials`) ? 'active-nav-link' : ''}>[ALL TUTORIALS]</a>
-        <a href={`${base}/goods`} class={(Astro.url.pathname === `${base}/goods` || Astro.url.pathname === `${base}/goods/`) ? 'active-nav-link' : ''}>[ALL GOODS]</a>
-        <a href={`${base}/goods/updates/`} class={Astro.url.pathname === `${base}/goods/updates/` ? 'active-nav-link' : ''}>[ALL UPDATES]</a>
+        <a href={`${base}/tutorials`} class={Astro.url.pathname.startsWith(`${base}/tutorials`) ? 'active-nav-link' : ''}>[TUTORIALS]</a>
+        <a href={`${base}/goods`} class={(Astro.url.pathname === `${base}/goods` || Astro.url.pathname === `${base}/goods/`) ? 'active-nav-link' : ''}>[GOODS]</a>
+        <a href={`${base}/goods/updates/`} class={Astro.url.pathname === `${base}/goods/updates/` ? 'active-nav-link' : ''}>[UPDATES]</a>
 
         <button id="open-search-btn">[SEARCH]</button>
 
