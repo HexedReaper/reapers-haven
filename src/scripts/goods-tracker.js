@@ -1,9 +1,7 @@
-// src/scripts/goods-tracker.js
-// Reads pre-generated cache. Zero git calls at render time.
+// ..src/scripts/goods-tracker.js
 import path from 'path';
 import fs from 'fs';
 
-// CWD-relative path, same pattern as the original OVERRIDES_PATH
 const CACHE_PATH = path.resolve('src/data/goods-history.json');
 
 export function getGoodsHistory() {
@@ -15,7 +13,12 @@ export function getGoodsHistory() {
       return [];
     }
     const raw = JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
-    return raw.history || [];
+    // FIX: validate structure before returning
+    if (!raw || !Array.isArray(raw.history)) {
+      console.warn('⚠ goods-history.json has invalid structure. Regenerate cache.');
+      return [];
+    }
+    return raw.history;
   } catch (e) {
     console.error('Failed to read goods history cache:', e.message);
     return [];
