@@ -4,7 +4,7 @@
 .index-content {
     max-width: 80rem;
     margin: 0 auto 1.5rem auto;
-    padding: 5.5rem 2.5rem 1rem 2.5rem;
+    padding: 2.5rem 2.5rem 1rem 2.5rem;
 }
 
 .index-content > ul,
@@ -49,7 +49,8 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    padding: 0; /* Removed padding */
+    min-width: 0;
+    padding: 0;
     height: 100%;
     box-sizing: border-box;
     font-size: 1rem;
@@ -66,7 +67,9 @@
 
 /* Style for the meta tags on the home page (sibling of <a>) */
 .index-content .meta-tag {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--text-muted);
@@ -75,7 +78,9 @@
     padding: 0.3rem 0.6rem;
     border-radius: 4px;
     letter-spacing: 0.5px;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    text-align: right;
 }
 
 /* Style for spans inside links (goods/tutorials index) */
@@ -88,6 +93,11 @@
     background: none;
     border: none;
     padding: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .index-content h2 {
@@ -141,7 +151,7 @@
 
 .index-content div > ul > li a {
     display: block;
-    padding: 0; /* Removed padding */
+    padding: 0;
     height: 100%;
     box-sizing: border-box;
     font-weight: bold;
@@ -153,22 +163,6 @@
 .index-content div > ul > li a:hover {
     color: var(--accent);
     background: none;
-}
-
-@media (max-width: 600px) {
-    .index-content {
-        padding: 5.5rem 1rem 1rem 1rem;
-    }
-
-    .index-content > ul > li,
-    .index-content div > ul > li {
-        padding: 0.75rem;
-    }
-
-    .index-content > ul > li a,
-    .index-content div > ul > li a {
-        font-size: 0.9rem;
-    }
 }
 
 /* ==========================================================================
@@ -218,18 +212,97 @@
 .index-content[data-view="cards"] > ul,
 .index-content[data-view="cards"] div > ul {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    /* FIX Bug: Lowered minmax from 260px to 140px so phones display 2 columns */
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 1rem;
+    align-items: stretch; /* Ensures all cards in a row match height */
 }
 
-.index-content[data-view="cards"] > ul > li {
+.index-content[data-view="cards"] > ul > li,
+.index-content[data-view="cards"] div > ul > li {
+    display: flex; /* Ensure flex for tutorials list which defaults to block */
+    flex-direction: column;
     min-height: 110px;
+    border-left: 1px solid var(--border-glass); /* Reset 3px border for uniform cards */
+    padding: 1rem;
 }
 
-.index-content[data-view="cards"] > ul > li a {
+.index-content[data-view="cards"] > ul > li a,
+.index-content[data-view="cards"] div > ul > li a {
+    display: flex; /* Override block display from tutorials list */
+    flex-direction: column;
     justify-content: flex-end;
+    align-items: flex-start;
+    height: 100%;
+    width: 100%;
 }
 
-.index-content[data-view="cards"] div > ul > li:hover {
+.index-content[data-view="cards"] div > ul > li:hover,
+.index-content[data-view="cards"] > ul > li:hover {
     transform: translateY(-3px);
+}
+
+/* ==========================================================================
+   MOBILE LAYOUT ADJUSTMENTS
+========================================================================== */
+@media (max-width: 600px) {
+    .index-content {
+        padding: 1rem;
+    }
+
+    /* LIST VIEW TIGHTENING */
+    .index-content[data-view="list"] > ul > li,
+    .index-content[data-view="list"] div > ul > li {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .index-content[data-view="list"] > ul > li a,
+    .index-content[data-view="list"] div > ul > li a {
+        font-size: 0.9rem;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .index-content[data-view="list"] > ul > li a span {
+        font-size: 0.75rem;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .index-content[data-view="list"] .meta-tag {
+        width: 100%;
+        text-align: left;
+        margin-top: 0.25rem;
+    }
+
+    /* CARDS VIEW ENHANCEMENT */
+    .index-content[data-view="cards"] > ul,
+    .index-content[data-view="cards"] div > ul {
+        gap: 0.75rem; /* Tighter gap for mobile grid */
+    }
+
+    .index-content[data-view="cards"] > ul > li,
+    .index-content[data-view="cards"] div > ul > li {
+        padding: 0.75rem;
+    }
+
+    .index-content[data-view="cards"] > ul > li a,
+    .index-content[data-view="cards"] div > ul > li a {
+        font-size: 0.85rem; /* Slightly smaller text for 2-column mobile cards */
+    }
+
+    .index-content[data-view="cards"] > ul > li a span {
+        font-size: 0.7rem;
+        white-space: normal; /* Allow description to wrap on 2 lines if needed */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
 }
