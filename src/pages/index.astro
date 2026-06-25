@@ -1,4 +1,5 @@
 ---
+// ../src/pages/index.astro
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 const base = (import.meta.env.BASE_URL || '').replace(/\/+$/, '');
@@ -16,8 +17,6 @@ const sortedGoods = allGoods.sort((a, b) => a.data.title.localeCompare(b.data.ti
 
 <BaseLayout title="Home">
   <div class="index-content">
-    <div>
-    </div>
     <h1>Reaper's Haven</h1>
     <p>the collection of goods: websites, apps, guides, indexes...</p>
     <p>I CANNOT GUARANTEE THAT THE CONTENT IS WORKING, ISN"T OUTDATED OR DOESN'T HAVE MISTAKES. USE AT YOUR OWN RISK, TRIPLE CHECK EVERYTHING. THIS WEBSITE IS SIMPLY ARCHIVE OF FOSS, OSS AND PROPERTARY SOFTWARE IN DIFFERENT FIELDS.</p>
