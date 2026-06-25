@@ -121,6 +121,7 @@
 }
 
 @keyframes slowFade {
+
     0%,
     100% {
         opacity: 1;
@@ -132,19 +133,19 @@
 }
 
 .collapse-btn {
-    position: static; 
+    position: static;
     transform: none;
     padding: 0 0.25rem;
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-size: 0.7rem; 
-    font-family: var(--font-mono); 
-    background: transparent; 
-    border: 1px solid transparent; 
-    border-radius: 3px; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
     color: var(--text-muted);
-    cursor: pointer; 
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
@@ -356,68 +357,73 @@
    MOBILE LAYOUT (Drawer System)
 ========================================================================== */
 @media (max-width: 79.99rem) {
-    .sidebar {
-        position: fixed;
-        top: 0;
-        margin-top: 6.5rem;
-        height: calc(100vh - 6.5rem);
-        overflow-y: auto;
+    @media (max-width: 79.99rem) {
+        .sidebar {
+            position: fixed;
+            top: var(--mobile-nav-height);
+            /* FIX Bug: Use universal variable, mathematically prevents overlap */
+            margin-top: 0;
+            height: calc(100vh - var(--mobile-nav-height));
+            overflow-y: auto;
 
-        backdrop-filter: none !important;
-        width: 16.5rem;
-        max-width: 85vw;
-        background-color: rgba(20, 21, 33, 0.98);
-        z-index: 200;
-        padding: 1.5rem 0.75rem;
-        box-sizing: border-box;
-    }
+            backdrop-filter: none !important;
+            width: 16.5rem;
+            max-width: 85vw;
+            background-color: rgba(20, 21, 33, 0.98);
+            z-index: 200;
+            padding: 1.5rem 0.75rem;
+            box-sizing: border-box;
+        }
 
-    /* Reset desktop margins back to 5% */
-    .sidebar-layout-wrapper .main-content {
-        margin-left: 5%;
-        margin-right: 5%;
-        width: 90%;
-        margin-top: 0;
-        padding-top: 5rem;
-    }
+        /* Reset desktop margins back to 5% */
+        .sidebar-layout-wrapper .main-content {
+            margin-left: 5%;
+            margin-right: 5%;
+            width: 90%;
+            margin-top: 0;
+            padding-top: 0;
+            /* FIX Bug: Body padding handles navbar clearance universally */
+        }
 
-    .sidebar-layout-wrapper {
-        margin-top: 2rem;
-    }
+        .sidebar-layout-wrapper {
+            margin-top: 0;
+            /* FIX Bug: Remove conflicting margin */
+        }
 
-    .sidebar-inner { 
-        height: auto; 
-        min-height: 100%;
-        overflow-y: visible; 
-        -webkit-overflow-scrolling: touch; 
-        padding-bottom: 4rem; 
-        padding-right: 0.5rem; 
-        display: block !important; 
-        opacity: 1; 
-        visibility: visible;
-    }
+        .sidebar-inner {
+            height: auto;
+            min-height: 100%;
+            overflow-y: visible;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 4rem;
+            padding-right: 0.5rem;
+            display: block !important;
+            opacity: 1;
+            visibility: visible;
+        }
 
-    /* Default state: off-screen drawer positioning */
-    .left-sidebar {
-        transform: translateX(-100%);
-    }
+        /* Default state: off-screen drawer positioning */
+        .left-sidebar {
+            transform: translateX(-100%);
+        }
 
-    .right-sidebar {
-        transform: translateX(100%);
-    }
+        .right-sidebar {
+            transform: translateX(100%);
+        }
 
-    /* Completely hide the old floating vertical edge tabs */
-    .sidebar .expand-btn,
-    .left-sidebar .expand-btn,
-    .right-sidebar .expand-btn {
-        display: none !important;
-    }
+        /* Completely hide the old floating vertical edge tabs */
+        .sidebar .expand-btn,
+        .left-sidebar .expand-btn,
+        .right-sidebar .expand-btn {
+            display: none !important;
+        }
 
-    /* Expanded Drawer Trigger States */
-    .sidebar-layout-wrapper.left-collapsed .left-sidebar,
-    .sidebar-layout-wrapper.right-collapsed .right-sidebar {
-        transform: translateX(0);
-        width: 16.5rem;
-        padding: 1.5rem 0.75rem;
+        /* Expanded Drawer Trigger States */
+        .sidebar-layout-wrapper.left-collapsed .left-sidebar,
+        .sidebar-layout-wrapper.right-collapsed .right-sidebar {
+            transform: translateX(0);
+            width: 16.5rem;
+            padding: 1.5rem 0.75rem;
+        }
     }
 }
