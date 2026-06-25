@@ -35,7 +35,8 @@ const groupedTutorials = sortedTutorials.reduce((acc, tutorial) => {
       <div>
         <h3>[{category.toUpperCase()}]</h3>
         <ul>
-          {(tutorials as CollectionEntry<'tutorials'>[]).map((tutorial) => (
+          {/* groupedTutorials is already typed as Record<string, CollectionEntry<'tutorials'>[]>, so casting tutorials again inside the map is redundant and hurts readability. */}
+          {tutorials.map((tutorial) => (
             <li>
               <a href={`${base}/tutorials/${tutorial.id}`}>{tutorial.data.title}</a>
             </li>
