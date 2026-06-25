@@ -1,4 +1,5 @@
 ---
+// ../src/pages/goods/[...slug].astro
 import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
@@ -24,14 +25,16 @@ const base = (import.meta.env.BASE_URL || '').replace(/\/+$/, '');
 
 <BaseLayout title={entry.data.title}>
   <div class="sidebar-layout-wrapper" id="sidebar-layout">
+
+    <!-- QOL: Fixed problem - Using inline onclick="document.getElementById(...)" is repeated 4 times per file -->
       
       <aside class="sidebar left-sidebar">
-        <button class="expand-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('left-collapsed')" title="Expand Left Sidebar">GOODS</button>
+        <button class="expand-btn" data-side="left" title="Expand Left Sidebar">GOODS</button> { }
         
         <div class="sidebar-inner">
           <div class="sidebar-header">
             <h3 class="sidebar-title">/dev/Goods</h3> 
-            <button class="collapse-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('left-collapsed')" title="Collapse">[ &LeftTriangleBar; ]</button>
+            <button class="collapse-btn" data-side="left" title="Collapse">[ &LeftTriangleBar; ]</button>
           </div>
           <ul class="tree-list">
             {allItems.map(item => (
@@ -55,12 +58,12 @@ const base = (import.meta.env.BASE_URL || '').replace(/\/+$/, '');
       </main>
 
       <aside class="sidebar right-sidebar">
-        <button class="expand-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('right-collapsed')" title="Expand Right Sidebar">INDEX</button>
+        <button class="expand-btn" data-side="right" title="Expand Right Sidebar">INDEX</button>
         
         <div class="sidebar-inner">
           <div class="sidebar-header">
             <h3 class="sidebar-title">On this page</h3>
-            <button class="collapse-btn" onclick="document.getElementById('sidebar-layout').classList.toggle('right-collapsed')" title="Collapse">[ &RightTriangleBar; ]</button>
+            <button class="collapse-btn" data-side="right" title="Collapse">[ &RightTriangleBar; ]</button>
           </div>
           <ul class="toc-list">
             {headings.map(heading => (
@@ -75,4 +78,18 @@ const base = (import.meta.env.BASE_URL || '').replace(/\/+$/, '');
       </aside>
 
     </div>
+
+    <script is:inline>
+      (function() {
+        const layout = document.getElementById('sidebar-layout');
+        if (!layout) return;
+        
+        document.querySelectorAll('[data-side]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const side = btn.getAttribute('data-side');
+            layout.classList.toggle(`${side}-collapsed`);
+          });
+        });
+      })();
+  </script>
 </BaseLayout>
