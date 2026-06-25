@@ -18,10 +18,23 @@ body {
     overflow-x: hidden;
 }
 
-@media (max-width: 600px) {
+/* @media (max-width: 600px) {
     body {
         font-size: 0.85rem;
         padding-top: 55px;
+    }
+} */
+
+
+@media (max-width: 79.99rem) {
+    body {
+        padding-top: var(--mobile-nav-height);
+    }
+}
+
+@media (max-width: 600px) {
+    body {
+        font-size: 0.85rem;
     }
 }
 
