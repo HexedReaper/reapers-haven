@@ -15,6 +15,9 @@ importers:
         specifier: ^0.34.5
         version: 0.34.5
     devDependencies:
+      pagecrypt:
+        specifier: ^7.1.0
+        version: 7.1.0
       vite-plugin-singlefile:
         specifier: ^2.3.3
         version: 2.3.3(rollup@4.60.2)(vite@7.3.2)
@@ -1097,6 +1100,11 @@ packages:
 
   package-manager-detector@1.6.0:
     resolution: {integrity: sha512-61A5ThoTiDG/C8s8UMZwSorAGwMJ0ERVGj2OjoW5pAalsNOg15+iQiPzrLJ4jhZ1HJzmC2PIHT2oEiH3R5fzNA==}
+
+  pagecrypt@7.1.0:
+    resolution: {integrity: sha512-/7PlZN+cx/14d2kV8NVuWiEC1X0pN2os6Bum2jct38n2FhE3zBkXtIqoKI7bKaaGInVICyHHFwnndlPXjyhzLQ==}
+    engines: {node: '>= 16.0.0'}
+    hasBin: true
 
   parse-latin@7.0.0:
     resolution: {integrity: sha512-mhHgobPPua5kZ98EF4HWiH167JWBfl4pvAIXXdbaVohtK7a6YBOy56kvhCqduqyo/f3yrHFWmqmiMg/BkBkYYQ==}
@@ -2674,6 +2682,8 @@ snapshots:
   p-timeout@7.0.1: {}
 
   package-manager-detector@1.6.0: {}
+
+  pagecrypt@7.1.0: {}
 
   parse-latin@7.0.0:
     dependencies:
