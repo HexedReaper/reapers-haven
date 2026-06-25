@@ -6,7 +6,7 @@
     top: 0;
     left: 0;
     right: 0;
-    width: 100%;
+    max-width: 100vw; /* FIX Bug4: Prevent scrollbar width miscalculation */
     z-index: 500;
     display: flex;
     align-items: center;
@@ -105,63 +105,73 @@
 ========================================================================== */
 @media (max-width: 79.99rem) {
     .main-nav {
-        padding: 0.6rem 0.75rem;
-        gap: 0.4rem 0.35rem;
-        flex-wrap: wrap; /* Allows split-row layout */
+        padding: 0.5rem 0.75rem;
+        gap: 0.3rem 0.35rem;
+        flex-wrap: wrap;
+        height: var(--mobile-nav-height);
+        align-content: flex-start;
+        box-sizing: border-box;
+        overflow: hidden;
     }
 
     /* 1. Base Element Sizing Styles */
     .main-nav a, 
     .main-nav button {
-        font-size: 0.65rem;
-        padding: 5px 8px;
+        font-size: 0.6rem; 
+        padding: 5px 6px;
+        white-space: nowrap;
     }
 
-    /* 2. Visual Separation Row Line */
+    .telemetry-toggle {
+        display: none !important;
+    }
+
+    /* 2. Link Navigation Row (Row 1) */
+    .main-nav a {
+        order: 1;
+        flex: 1 1 0; 
+        min-width: 0;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* 3. Visual Separation Row Line */
     .main-nav hr {
         display: block;
         width: 100%;
         border: none;
         border-top: 1px dashed var(--border-glass);
-        margin: 0.25rem 0;
-        order: 5; /* Positioned directly between row structures */
+        margin: 0.2rem 0;
+        order: 2; 
     }
 
-    /* 3. Link Navigation Row (Pushed below structural buttons) */
-    .main-nav a {
-        order: 10;
-        flex-grow: 1;
-        text-align: center;
-    }
-
-    /* 4. Action Overlay Control Elements (Pinned to row 1) */
+    /* 4. Action Overlay Control Elements (Row 2) */
     .nav-sidebar-toggle {
         display: inline-block;
         font-weight: bold;
     }
 
     .nav-sidebar-toggle.left-toggle {
-        order: 1;
+        order: 3;
+        flex: 0 0 auto; /* Prevent shrinking */
+        margin-right: 0.5rem; /* Gap before search */
         border-color: rgba(112, 190, 230, 0.4) !important;
         color: var(--accent-cyan) !important;
-        margin-right: auto; /* Locks left side positioning */
     }
 
     #open-search-btn {
-        order: 2;
+        order: 4;
+        flex: 1 1 auto; /* Stretches to take up the full remaining length of the row */
         margin-left: 0;
         margin-right: 0;
     }
 
     .nav-sidebar-toggle.right-toggle {
-        order: 3;
+        order: 5;
+        flex: 0 0 auto; /* Prevent shrinking */
+        margin-left: 0.5rem; /* Gap after search */
         border-color: rgba(157, 126, 250, 0.4) !important;
         color: var(--accent-alt) !important;
-        margin-left: auto; /* Locks right side positioning */
-    }
-
-    /* Hide telemetry on tight mobile viewports to preserve clean layout spaces */
-    .telemetry-toggle {
-        display: none !important;
     }
 }
