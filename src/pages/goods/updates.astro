@@ -1,10 +1,11 @@
 ---
+// ..src/pages/goods/updates.astro
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getGoodsHistory } from "../../scripts/goods-tracker.js";
 import kaomojiData from "../../data/kaomojis.json";
 import "../../styles/updates.css";
 
-const historyData = getGoodsHistory();
+const historyData = getGoodsHistory() as any[];
 const base = (import.meta.env.BASE_URL || "").replace(/\/+$/, "");
 
 const groupedHistoryData = historyData.map((block: any) => {
@@ -30,47 +31,51 @@ const groupedHistoryData = historyData.map((block: any) => {
   };
 });
 
-function getKaomoji(
-  category: "active" | "error" | "neutral" | "action",
-): string {
-  const collection = kaomojiData[category];
+// CHART DATA: Group activity by month for the minimalist sparkline
+const monthlyActivity: Record<string, number> = {};
+historyData.forEach((block: any) => {
+  const month = String(block.date).substring(0, 7); // YYYY-MM
+  if (!monthlyActivity[month]) monthlyActivity[month] = 0;
+  monthlyActivity[month] += block.logs.length;
+});
+const chartMonths: string[] = Object.keys(monthlyActivity).sort();
+const maxActivity = Math.max(...Object.values(monthlyActivity).map(Number), 1);
+
+// Generate ASCII Sparkline string (with tooltips)
+const sparkChars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const sparklineStr = chartMonths.map(m => {
+  const ratio = maxActivity > 0 ? monthlyActivity[m] / maxActivity : 0;
+  const char = sparkChars[Math.max(0, Math.min(7, Math.floor(ratio * 7)))];
+  return `<span title="${m}: ${monthlyActivity[m]} updates">${char}</span>`;
+}).join(' ');
+
+// Unique dates for the filter dropdown
+const uniqueDates: string[] = [...new Set(historyData.map((b: any) => String(b.date)))].sort().reverse();
+
+// Explicitly cast the imported JSON to prevent TS "unknown" inference
+const kaomojis = kaomojiData as Record<string, string[]>;
+
+function getKaomoji(category: "active" | "error" | "neutral" | "action"): string {
+  const collection = kaomojis[category] || [];
   return collection[Math.floor(Math.random() * collection.length)];
 }
 
 function slugify(text: string) {
   if (!text) return "section";
-  const slug = text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-
+  const slug = text.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
   return slug || "section";
 }
 
 function formatHumanDate(dateString: string) {
   if (!dateString) return "";
-  const parts = dateString.split("-");
+  const parts = String(dateString).split("-");
   if (parts.length !== 3) return dateString;
 
   const year = parts[0];
   const monthIdx = parseInt(parts[1], 10) - 1;
   const day = parseInt(parts[2], 10);
 
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const monthName = months[monthIdx] || "";
 
   let suffix = "th";
@@ -80,6 +85,31 @@ function formatHumanDate(dateString: string) {
 
   return `${monthName} ${day}${suffix}, ${year}`;
 }
+
+const totalAdded = historyData.reduce((acc: number, b: any) => acc + b.logs.filter((l: any) => l.action === 'added').length, 0);
+const totalUpdated = historyData.reduce((acc: number, b: any) => acc + b.logs.filter((l: any) => l.action === 'updated').length, 0);
+const totalMoved = historyData.reduce((acc: number, b: any) => acc + b.logs.filter((l: any) => l.action === 'moved').length, 0);
+const totalRemoved = historyData.reduce((acc: number, b: any) => acc + b.logs.filter((l: any) => l.action === 'removed').length, 0);
+const totalFiles = [...new Set(historyData.flatMap((b: any) => b.logs.map((l: any) => l.collectionName)))].length;
+
+// Action Distribution Graph Data
+const totalActions = totalAdded + totalUpdated + totalMoved + totalRemoved;
+const addedPct = totalActions > 0 ? (totalAdded / totalActions) * 100 : 0;
+const updatedPct = totalActions > 0 ? (totalUpdated / totalActions) * 100 : 0;
+const movedPct = totalActions > 0 ? (totalMoved / totalActions) * 100 : 0;
+const removedPct = totalActions > 0 ? (totalRemoved / totalActions) * 100 : 0;
+
+// Top Collections Graph Data
+const collectionCounts: Record<string, number> = {};
+historyData.forEach((block: any) => {
+  block.logs.forEach((log: any) => {
+    const c = log.collectionName || 'unknown';
+    if (!collectionCounts[c]) collectionCounts[c] = 0;
+    collectionCounts[c]++;
+  });
+});
+const topCollections = Object.entries(collectionCounts).sort((a,b) => b[1] - a[1]).slice(0, 4);
+const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
 ---
 
 <BaseLayout title="Updates Tracker">
@@ -88,30 +118,87 @@ function formatHumanDate(dateString: string) {
     <div class="header-group">
       <div class="header-left">
         <h2 class="timeline-header">/dev/logger</h2>
-        <span class="header-version">v2.4.1</span>
+        <span class="header-version">v2.4.2</span>
       </div>
       <div class="header-right">
         <span class="system-badge">{getKaomoji("active")} status: active</span>
-        <span class="header-uptime">uptime: 99.8%</span>
+        <span class="header-uptime">uptime: 99.9%</span>
       </div>
     </div>
 
     <div class="stats-bar">
-      <div class="stat-item">
+      <div class="stat-item" title={`Total additions: ${totalAdded}`}>
         <span class="stat-dot dot-green"></span>
-        <span class="stat-label">tracked:</span>
-        <span class="stat-value">{historyData.reduce((acc: number, b: any) => acc + b.logs.length, 0)} changes</span>
+        <span class="stat-label">additions:</span>
+        <span class="stat-value">{totalAdded}</span>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" title={`Total modifications: ${totalUpdated}`}>
         <span class="stat-dot dot-cyan"></span>
-        <span class="stat-label">collections:</span>
-        <span class="stat-value">{[...new Set(historyData.flatMap((b: any) => b.logs.map((l: any) => l.collectionName)))].length} files</span>
+        <span class="stat-label">modifications:</span>
+        <span class="stat-value">{totalUpdated}</span>
       </div>
-      <div class="stat-item">
+      <div class="stat-item" title={`Total moves: ${totalMoved}`}>
         <span class="stat-dot dot-purple"></span>
-        <span class="stat-label">since:</span>
-        <span class="stat-value">{historyData.length > 0 ? formatHumanDate(historyData[historyData.length - 1].date) : "N/A"}</span>
+        <span class="stat-label">moved:</span>
+        <span class="stat-value">{totalMoved}</span>
       </div>
+      <div class="stat-item" title={`Total removals: ${totalRemoved}`}>
+        <span class="stat-dot dot-red"></span>
+        <span class="stat-label">removals:</span>
+        <span class="stat-value">{totalRemoved}</span>
+      </div>
+      <div class="stat-item" title={`Unique files tracked: ${totalFiles}`}>
+        <span class="stat-dot dot-cyan"></span>
+        <span class="stat-label">files tracked:</span>
+        <span class="stat-value">{totalFiles}</span>
+      </div>
+    </div>
+
+    <div class="action-distribution-box">
+      <span class="dist-label">action distribution:</span>
+      <div class="dist-bar" title={`Added: ${addedPct.toFixed(1)}% | Updated: ${updatedPct.toFixed(1)}% | Moved: ${movedPct.toFixed(1)}% | Removed: ${removedPct.toFixed(1)}%`}>
+        <div class="dist-seg dist-added" style={`width: ${addedPct}%`} title={`Added: ${totalAdded}`}></div>
+        <div class="dist-seg dist-updated" style={`width: ${updatedPct}%`} title={`Updated: ${totalUpdated}`}></div>
+        <div class="dist-seg dist-moved" style={`width: ${movedPct}%`} title={`Moved: ${totalMoved}`}></div>
+        <div class="dist-seg dist-removed" style={`width: ${removedPct}%`} title={`Removed: ${totalRemoved}`}></div>
+      </div>
+    </div>
+
+    <div class="top-collections-box">
+      <span class="dist-label">top collections:</span>
+      <div class="collections-list">
+        {topCollections.map(([col, count]) => (
+          <div class="col-chip-item" title={`${col}: ${count} changes`}>
+            <span class="col-chip-name">{col.split('/').pop()}</span>
+            <div class="col-chip-bar">
+              <div class="col-chip-fill" style={`width: ${(count / maxCollectionCount) * 100}%`}></div>
+            </div>
+            <span class="col-chip-count">{count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {}
+    <div class="sparkline-box">
+      <span class="sparkline-text" title="Activity over time" set:html={sparklineStr} />
+      <span class="sparkline-info">{chartMonths.length} months tracked</span>
+    </div>
+
+    {}
+    <div class="controls-bar">
+      <input type="text" id="filter-search" class="filter-input" placeholder="Search logs (name, message)..." />
+      <select id="filter-action" class="filter-select">
+        <option value="all">All Actions</option>
+        <option value="added">Added</option>
+        <option value="updated">Updated</option>
+        <option value="moved">Moved</option>
+        <option value="removed">Removed</option>
+      </select>
+      <select id="filter-date" class="filter-select">
+        <option value="all">All Dates</option>
+        {uniqueDates.map(d => <option value={d}>{formatHumanDate(d)}</option>)}
+      </select>
     </div>
 
     {
@@ -121,7 +208,7 @@ function formatHumanDate(dateString: string) {
         </p>
       ) : (
         groupedHistoryData.map((block) => (
-          <details open class="update-accordion">
+          <details open class="update-accordion" data-date={block.date}>
             <summary class="date-sticky-banner">
               <span class="banner-icon">◆</span>
               <span class="banner-folder">content/</span>
@@ -136,9 +223,9 @@ function formatHumanDate(dateString: string) {
               {Object.entries(block.collections).map(
                 ([collectionName, sections]: [string, any]) => {
                   const allLogsInSection = Object.values(sections).flat();
-                  const totalAdded = allLogsInSection.filter((i: any) => i.action === 'added').length;
-                  const totalRemoved = allLogsInSection.filter((i: any) => i.action === 'removed').length;
-                  const totalUpdated = allLogsInSection.filter((i: any) => i.action === 'updated').length;
+                  const cAdded = allLogsInSection.filter((i: any) => i.action === 'added').length;
+                  const cUpdated = allLogsInSection.filter((i: any) => i.action === 'updated').length;
+                  const cMoved = allLogsInSection.filter((i: any) => i.action === 'moved').length;
                   
                   return (
                   <details open class="collection-accordion">
@@ -148,9 +235,9 @@ function formatHumanDate(dateString: string) {
                         {collectionName}.md
                       </span>
                       <span class="collection-stats">
-                        {totalRemoved > 0 && <span class="cstat-removed">-{totalRemoved}</span>}
-                        {totalAdded > 0 && <span class="cstat-added">+{totalAdded}</span>}
-                        {totalUpdated > 0 && <span class="cstat-updated">~{totalUpdated}</span>}
+                        {cAdded > 0 && <span class="cstat-added">+{cAdded}</span>}
+                        {cUpdated > 0 && <span class="cstat-updated">~{cUpdated}</span>}
+                        {cMoved > 0 && <span class="cstat-moved">&lt;-&gt;{cMoved}</span>}
                       </span>
                       <span class="collection-toggle">/* click to flip */</span>
                     </summary>
@@ -159,24 +246,22 @@ function formatHumanDate(dateString: string) {
                       {Object.entries(sections).map(([sectionTitle, logs]: [string, any]) => {
                         const isGlobal = sectionTitle === "Global";
                         const addedCount = logs.filter((i: any) => i.action === 'added').length;
-                        const removedCount = logs.filter((i: any) => i.action === 'removed').length;
                         const updatedCount = logs.filter((i: any) => i.action === 'updated').length;
+                        const movedCount = logs.filter((i: any) => i.action === 'moved').length;
 
                         return (
-                          <div
-                            class={`section-wrapper ${isGlobal ? "is-global-fallback" : ""}`}
-                          >
+                          <div class={`section-wrapper ${isGlobal ? "is-global-fallback" : ""}`}>
                             {!isGlobal ? (
-                              <details class="section-accordion">
+                              <details class="section-accordion" open>
                                 <summary class="section-summary-header">
                                   <span class="section-indicator">#</span>
                                   <span class="section-summary-title">
                                     {sectionTitle}
                                   </span>
                                   <span class="section-stats">
-                                    {removedCount > 0 && <span class="stat-removed">-{removedCount}</span>}
                                     {addedCount > 0 && <span class="stat-added">+{addedCount}</span>}
                                     {updatedCount > 0 && <span class="stat-updated">~{updatedCount}</span>}
+                                    {movedCount > 0 && <span class="stat-moved">&lt;-&gt;{movedCount}</span>}
                                   </span>
                                   <span class="section-count-badge">
                                     ({logs.length})
@@ -193,11 +278,15 @@ function formatHumanDate(dateString: string) {
                                     const name = isObject ? item.name : "Item";
                                     const type = isObject ? item.type : "site";
                                     const fallbackMessage = isObject ? item.message : String(item);
-                                    const targetUrl = `${base}/${collectionName}/#${slugify(sectionTitle)}`;
-                                    const actionBracket = action === "added" ? "[ + ]" : action === "removed" ? "[ - ]" : "[ * ]";
+                                    
+                                    // FIX: Use item.pageUrl for deep linking, fallback to collectionName
+                                    const itemPageUrl = isObject && item.pageUrl ? item.pageUrl : `/${collectionName}`;
+                                    const targetUrl = `${base}${itemPageUrl}#${slugify(sectionTitle)}`;
+                                    
+                                    const actionBracket = action === "added" ? "[ + ]" : action === "moved" ? "[ <-> ]" : action === "removed" ? "[ - ]" : "[ * ]";
 
                                     return (
-                                      <div class="log-card" data-action={action}>
+                                      <div class="log-card" data-action={action} data-type={type} data-date={block.date} data-name={name.toLowerCase()} data-message={fallbackMessage.toLowerCase()}>
                                         {isObject ? (
                                           <div class="log-grid">
                                             <div class="meta-row">
@@ -241,9 +330,9 @@ function formatHumanDate(dateString: string) {
                                   <span class="section-indicator">#</span>
                                   <span class="section-summary-title">Global</span>
                                   <span class="section-stats">
-                                    {removedCount > 0 && <span class="stat-removed">-{removedCount}</span>}
                                     {addedCount > 0 && <span class="stat-added">+{addedCount}</span>}
                                     {updatedCount > 0 && <span class="stat-updated">~{updatedCount}</span>}
+                                    {movedCount > 0 && <span class="stat-moved">&lt;-&gt;{movedCount}</span>}
                                   </span>
                                 </div>
                                 <div class="log-list global-list-override">
@@ -253,11 +342,15 @@ function formatHumanDate(dateString: string) {
                                     const name = isObject ? item.name : "Item";
                                     const type = isObject ? item.type : "site";
                                     const fallbackMessage = isObject ? item.message : String(item);
-                                    const targetUrl = `${base}/${collectionName}/#Global`;
-                                    const actionBracket = action === "added" ? "[ + ]" : action === "removed" ? "[ - ]" : "[ * ]";
+                                    
+                                    /* FIX: Global section has no anchor on the page, link to page top instead */
+                                    const itemPageUrl = isObject && item.pageUrl ? item.pageUrl : `/${collectionName}`;
+                                    const targetUrl = `${base}${itemPageUrl}`;
+                                    
+                                    const actionBracket = action === "added" ? "[ + ]" : action === "moved" ? "[ <-> ]" : action === "removed" ? "[ - ]" : "[ * ]";
 
                                     return (
-                                      <div class="log-card" data-action={action}>
+                                      <div class="log-card" data-action={action} data-type={type} data-date={block.date} data-name={name.toLowerCase()} data-message={fallbackMessage.toLowerCase()}>
                                         {isObject ? (
                                           <div class="log-grid">
                                             <div class="meta-row">
@@ -309,4 +402,85 @@ function formatHumanDate(dateString: string) {
       )
     }
   </main>
+
+  <script is:inline>
+    (function() {
+      const searchInput = document.getElementById('filter-search');
+      const actionFilter = document.getElementById('filter-action');
+      const dateFilter = document.getElementById('filter-date');
+
+      let debounceTimer;
+      function applyFilters() {
+        if (!searchInput || !actionFilter || !dateFilter) return;
+        
+        const searchTerm = searchInput.value.toLowerCase();
+        const actionVal = actionFilter.value;
+        const dateVal = dateFilter.value;
+        
+        // FIX: Track if a filter is actively applied to respect manual collapses
+        const isFiltering = searchTerm !== '' || actionVal !== 'all' || dateVal !== 'all';
+
+        const cards = document.querySelectorAll('.log-card');
+        cards.forEach(card => {
+          const name = card.getAttribute('data-name') || '';
+          const msg = card.getAttribute('data-message') || '';
+          const action = card.getAttribute('data-action') || '';
+          const date = card.getAttribute('data-date') || '';
+
+          const matchesSearch = searchTerm === '' || name.includes(searchTerm) || msg.includes(searchTerm);
+          const matchesAction = actionVal === 'all' || action === actionVal;
+          const matchesDate = dateVal === 'all' || date === dateVal;
+
+          if (matchesSearch && matchesAction && matchesDate) {
+            card.classList.remove('is-hidden');
+          } else {
+            card.classList.add('is-hidden');
+          }
+        });
+
+        document.querySelectorAll('.section-wrapper, .global-section-wrapper').forEach(sec => {
+          const visibleCards = sec.querySelectorAll('.log-card:not(.is-hidden)');
+          if (visibleCards.length === 0) {
+            sec.classList.add('is-hidden');
+          } else {
+            sec.classList.remove('is-hidden');
+            if (isFiltering) {
+              const acc = sec.querySelector('.section-accordion');
+              if (acc) acc.setAttribute('open', '');
+            }
+          }
+        });
+
+        document.querySelectorAll('.collection-accordion').forEach(col => {
+          const visibleSecs = col.querySelectorAll('.section-wrapper:not(.is-hidden), .global-section-wrapper:not(.is-hidden)');
+          if (visibleSecs.length === 0) {
+            col.classList.add('is-hidden');
+          } else {
+            col.classList.remove('is-hidden');
+            if (isFiltering) col.setAttribute('open', '');
+          }
+        });
+
+        document.querySelectorAll('.update-accordion').forEach(dateAcc => {
+          const visibleCols = dateAcc.querySelectorAll('.collection-accordion:not(.is-hidden)');
+          if (visibleCols.length === 0) {
+            dateAcc.classList.add('is-hidden');
+          } else {
+            dateAcc.classList.remove('is-hidden');
+            if (isFiltering) dateAcc.setAttribute('open', '');
+          }
+        });
+      }
+
+      // QOL: Debounce search input to prevent UI lag on large histories
+      if (searchInput) {
+        searchInput.addEventListener('input', () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(applyFilters, 200);
+        });
+      }
+      if (actionFilter) actionFilter.addEventListener('change', applyFilters);
+      if (dateFilter) dateFilter.addEventListener('change', applyFilters);
+    })();
+  </script>
 </BaseLayout>
