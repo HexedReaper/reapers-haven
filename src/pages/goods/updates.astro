@@ -179,13 +179,13 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
       </div>
     </div>
 
-    {}
+    {/* MINIMALIST SPARKLINE */}
     <div class="sparkline-box">
       <span class="sparkline-text" title="Activity over time" set:html={sparklineStr} />
       <span class="sparkline-info">{chartMonths.length} months tracked</span>
     </div>
 
-    {}
+    {/* FILTERING CONTROLS */}
     <div class="controls-bar">
       <input type="text" id="filter-search" class="filter-input" placeholder="Search logs (name, message)..." />
       <select id="filter-action" class="filter-select">
@@ -227,8 +227,9 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
                   const cUpdated = allLogsInSection.filter((i: any) => i.action === 'updated').length;
                   const cMoved = allLogsInSection.filter((i: any) => i.action === 'moved').length;
                   
+                  // FIX: Made collection headers collapsed by default by removing 'open' attribute
                   return (
-                  <details open class="collection-accordion">
+                  <details class="collection-accordion">
                     <summary class="collection-header">
                       <span class="collection-icon">📄</span>
                       <span class="collection-name-text">
@@ -296,7 +297,7 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
                                               <span class={`type-tag tag-${type}`}>
                                                 {type}
                                               </span>
-                                              <span class="entity-name">
+                                              <span class="entity-name" title="Click to expand">
                                                 {name}
                                               </span>
                                             </div>
@@ -313,7 +314,7 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
                                         ) : (
                                           <div class="fallback-row">
                                             <span class="log-pointer">»</span>
-                                            <span class="log-text">{fallbackMessage}</span>
+                                            <span class="log-text" title="Click to expand">{fallbackMessage}</span>
                                             <a href={targetUrl} class="context-link">
                                               {getKaomoji("action")} [view_target]
                                             </a>
@@ -342,7 +343,7 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
                                     const name = isObject ? item.name : "Item";
                                     const type = isObject ? item.type : "site";
                                     const fallbackMessage = isObject ? item.message : String(item);
-                                    
+
                                     /* FIX: Global section has no anchor on the page, link to page top instead */
                                     const itemPageUrl = isObject && item.pageUrl ? item.pageUrl : `/${collectionName}`;
                                     const targetUrl = `${base}${itemPageUrl}`;
@@ -360,7 +361,7 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
                                               <span class={`type-tag tag-${type}`}>
                                                 {type}
                                               </span>
-                                              <span class="entity-name">
+                                              <span class="entity-name" title="Click to expand">
                                                 {name}
                                               </span>
                                             </div>
@@ -377,7 +378,7 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
                                         ) : (
                                           <div class="fallback-row">
                                             <span class="log-pointer">»</span>
-                                            <span class="log-text">{fallbackMessage}</span>
+                                            <span class="log-text" title="Click to expand">{fallbackMessage}</span>
                                             <a href={targetUrl} class="context-link">
                                               {getKaomoji("action")} [view_target]
                                             </a>
@@ -408,6 +409,14 @@ const maxCollectionCount = topCollections.length > 0 ? topCollections[0][1] : 1;
       const searchInput = document.getElementById('filter-search');
       const actionFilter = document.getElementById('filter-action');
       const dateFilter = document.getElementById('filter-date');
+
+      // QOL: Expand truncated text on click
+      document.querySelectorAll('.entity-name, .log-text').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          el.classList.toggle('is-expanded');
+        });
+      });
 
       let debounceTimer;
       function applyFilters() {
