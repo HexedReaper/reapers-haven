@@ -3,13 +3,14 @@
 /* ==========================================================================
    UPDATES CONTAINER
 ========================================================================== */
-updates-container {
+.updates-container {
   width: 90%;
   margin: 0 5%;
-  padding: 2.5rem 0; /* FIX Bug: Removed 5.5rem top padding to prevent massive gap */
+  padding: 2.5rem 0; 
   font-family: 'JetBrains Mono', monospace;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* CRT Scanline overlay effect */
@@ -286,6 +287,7 @@ updates-container {
   border-radius: 4px;
   outline: none;
   transition: border-color 0.2s ease;
+  box-sizing: border-box; /* FIX Bug: Prevent Android overflow */
 }
 
 .filter-input { flex-grow: 1; min-width: 200px; }
@@ -438,6 +440,7 @@ updates-container {
   width: auto;
   max-width: 100%;
   gap: 0.4rem;
+  box-sizing: border-box;
 }
 
 .collection-icon {
@@ -447,6 +450,7 @@ updates-container {
 
 .collection-name-text {
   word-break: break-all;
+  min-width: 0;
 }
 
 .collection-stats {
@@ -574,6 +578,8 @@ updates-container {
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .log-card[data-action="added"] {
@@ -633,6 +639,7 @@ updates-container {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .status-tag {
@@ -667,6 +674,23 @@ updates-container {
   font-size: 0.9rem;
   font-weight: bold;
   color: var(--text);
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.entity-name:hover {
+  color: var(--accent);
+}
+
+.entity-name.is-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
   word-break: break-word;
 }
 
@@ -678,12 +702,14 @@ updates-container {
   font-size: 0.7rem;
   color: var(--text-muted);
   width: 100%;
+  min-width: 0;
 }
 
 .token-group {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .path-label {
@@ -698,6 +724,8 @@ updates-container {
   border: 1px solid var(--border-glass);
   word-break: break-all;
   font-size: 0.65rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .section-token {
@@ -728,11 +756,30 @@ updates-container {
   flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.8rem;
+  min-width: 0;
 }
 
 .log-pointer {
   color: var(--accent);
   font-weight: bold;
+}
+
+.log-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.log-text.is-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
 }
 
 /* ==========================================================================
@@ -760,7 +807,9 @@ updates-container {
   .updates-container {
     width: 96%;
     margin: 0 auto;
-    padding: 1rem 0.25rem 1rem 0.25rem; /* FIX Bug: Unified padding, body handles nav clearance */
+    padding: 1rem 0.25rem 1rem 0.25rem; 
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .header-group {
@@ -787,6 +836,7 @@ updates-container {
     grid-template-columns: 1fr 1fr;
     gap: 0.8rem;
     padding: 0.8rem;
+    box-sizing: border-box;
   }
 
   .stat-item {
@@ -800,6 +850,7 @@ updates-container {
 
   .filter-input, .filter-select {
     width: 100%;
+    box-sizing: border-box;
   }
 
   .date-sticky-banner {
@@ -809,6 +860,7 @@ updates-container {
     align-items: center;
     justify-content: space-between;
     min-height: 48px;
+    box-sizing: border-box;
   }
 
   .banner-count { display: inline-block; } 
@@ -831,6 +883,7 @@ updates-container {
     flex-wrap: wrap;
     gap: 0.4rem;
     min-height: 48px;
+    box-sizing: border-box;
   }
   
   .collection-icon { display: none; }
@@ -844,6 +897,7 @@ updates-container {
     gap: 0.5rem;
     font-size: 0.85rem;
     min-height: 44px;
+    box-sizing: border-box;
   }
 
   .log-list {
@@ -873,10 +927,8 @@ updates-container {
 
   .entity-name {
     font-size: 1rem;
-    width: 100%;
-    display: block;
+    flex: 1 1 100%;
     margin-top: 0.4rem;
-    color: var(--text);
   }
 
   .context-row {
@@ -910,6 +962,19 @@ updates-container {
     border: 1px solid rgba(112, 190, 230, 0.15);
     border-radius: 4px;
   }
+  
+  .sparkline-box {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .sparkline-text {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }
 
 @media (max-width: 480px) {
@@ -926,7 +991,7 @@ updates-container {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    word-break: break-word; /* QOL: Prevent aggressive mid-word breaks like "and" -> "a" "nd" */
+    word-break: break-word;
   }
   
   .stats-bar {
