@@ -27,6 +27,18 @@ body {
 
 
 @media (max-width: 79.99rem) {
+    * {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .main-nav::after,
+    .sidebar-title::after,
+    .tree-list a.active-link,
+    .stat-dot {
+        animation: none !important;
+    }
+
     body {
         padding-top: var(--mobile-nav-height);
     }
@@ -63,7 +75,7 @@ button {
     border: 1px solid transparent;
     cursor: pointer;
     font-family: var(--font-mono);
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
 }
 
 button:hover {
@@ -159,7 +171,7 @@ h6 {
 a {
     color: var(--accent-cyan);
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
     position: relative;
 }
 
@@ -358,7 +370,7 @@ pre>code .line::before {
     border-radius: 3px;
     cursor: pointer;
     z-index: 10;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
     text-transform: uppercase;
     font-family: var(--font-mono);
     letter-spacing: 0.5px;
@@ -409,7 +421,7 @@ img {
     margin: 2rem 0;
     opacity: 0.85;
     filter: drop-shadow(0 0 2px rgba(192, 251, 226, 0.15));
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease;
 }
 
 @media (hover: hover) and (pointer: fine) {

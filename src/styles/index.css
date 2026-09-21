@@ -249,6 +249,12 @@
     .index-content {
         padding: 1rem;
     }
+    
+    .index-content > ul > li:hover,
+    .index-content div > ul > li:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
 
     /* LIST VIEW TIGHTENING */
     .index-content[data-view="list"] > ul > li,
@@ -304,5 +310,9 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+    }
+
+    #search-modal[open] {
+        animation-duration: 0.1s !important; /* Snappier open animation */
     }
 }

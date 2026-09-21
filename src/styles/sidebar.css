@@ -78,7 +78,7 @@
     justify-content: center;
     color: var(--text-muted);
     text-transform: uppercase;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
     cursor: pointer;
     border: none;
     background: transparent;
@@ -146,7 +146,7 @@
     border-radius: 3px;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
 }
 
 .collapse-btn:hover {
@@ -210,7 +210,7 @@
     position: relative;
     overflow: hidden;
     text-decoration: none;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     word-break: break-word;
     white-space: normal;
 }
