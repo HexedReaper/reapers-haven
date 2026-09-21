@@ -20,7 +20,7 @@ function runGit(args, cwd) {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
-    maxBuffer: 50 * 1024 * 1024  // 50 MB cap
+    maxBuffer: 1024 * 1024 * 1024 // 1 GB cap to prevent crashes on massive histories
   });
 }
 
@@ -44,14 +44,12 @@ function sanitizeLogEntry(entry) {
   for (const key of ['message', 'name', 'sectionTitle', 'collectionName', 'commitMessage', 'url', 'pageUrl']) {
     if (typeof entry[key] === 'string') {
       // Cap length to prevent oversized payloads
-      if (entry[key].length > 2000) entry[key] = entry[key].substring(0, 2000);
-      // HTML-escape to prevent stored XSS if rendered with set:html
-      entry[key] = escapeHtml(entry[key]);
+      if (entry[key].length > 2000) entry[key] = entry[key].substring(0, 2000); // HTML-escape to prevent stored XSS if rendered with set:html
     }
   }
   // Sanitize pageUrl to prevent path traversal / javascript: URLs
   if (entry.pageUrl) {
-    entry.pageUrl = sanitizePath(entry.pageUrl);
+    entry.pageUrl = entry.pageUrl.replace(/[^a-zA-Z0-9\-_\/]/g, '');
     if (!entry.pageUrl.startsWith('/')) entry.pageUrl = '/' + entry.pageUrl;
   }
   return entry;
@@ -66,32 +64,65 @@ function computeGoodsHistory() {
     const vaultPath = path.resolve(vault.path);
     if (!fs.existsSync(vaultPath)) return;
 
-    try {
-      runGit(['status'], vaultPath); // Verify it's a git repo
+    // Resolve symlinks so git runs in the actual repository directory
+    const realVaultPath = fs.realpathSync(vaultPath);
 
+    try {
+      runGit(['status'], realVaultPath); // Verify it's a git repo
+
+      // Get all diffs in a single git call (Optimized)
       const logOutput = runGit(
-        ['log', '--no-merges', '--format=%H|%at|%s'],
-        vaultPath
+        ['log', '--no-merges', '-p', '--format=___COMMIT___%H|%at|%s'],
+        realVaultPath
       );
 
       if (logOutput.trim()) {
-        const commits = logOutput.trim().split('\n').map(line => {
-          const [hash, timestamp, ...subjectParts] = line.split('|');
-          const subject = (subjectParts.join('|').trim() || "No commit message").slice(0, 500);
+        const commits = [];
+        let currentCommit = null;
+        let diffLines = [];
 
-          // Validate hash format before use
-          if (!HASH_RE.test(hash)) return null;
+        // Parse line-by-line to be bulletproof against regex edge cases
+        const lines = logOutput.split('\n');
 
-          const date = new Date(parseInt(timestamp, 10) * 1000);
-          if (isNaN(date.getTime())) return null;
+        for (const line of lines) {
+          if (line.startsWith('___COMMIT___')) {
+            if (currentCommit) {
+              currentCommit.diffText = diffLines.join('\n');
+              commits.push(currentCommit);
+              diffLines = [];
+            }
 
-          return {
-            hash,
-            date,
-            vault,
-            subject
-          };
-        }).filter(Boolean);
+            const pipe1 = line.indexOf('|');
+            const pipe2 = line.indexOf('|', pipe1 + 1);
+
+            if (pipe1 !== -1 && pipe2 !== -1) {
+              const hash = line.substring('___COMMIT___'.length, pipe1);
+              const timestamp = line.substring(pipe1 + 1, pipe2);
+              const subject = line.substring(pipe2 + 1).slice(0, 500) || "No commit message";
+
+              if (HASH_RE.test(hash)) {
+                const date = new Date(parseInt(timestamp, 10) * 1000);
+                if (!isNaN(date.getTime())) {
+                  currentCommit = { hash, date, vault, subject, diffText: '' };
+                } else {
+                  currentCommit = null;
+                }
+              } else {
+                currentCommit = null;
+              }
+            } else {
+              currentCommit = null;
+            }
+          } else if (currentCommit) {
+            diffLines.push(line);
+          }
+        }
+
+        // Push the very last commit
+        if (currentCommit) {
+          currentCommit.diffText = diffLines.join('\n');
+          commits.push(currentCommit);
+        }
 
         allCommits.push(...commits);
       }
@@ -120,24 +151,8 @@ function computeGoodsHistory() {
 
       commitsByDate[date].forEach(commit => {
         try {
-          let diffOutput = '';
-          const vaultDir = path.resolve(commit.vault.path);
-
-          try {
-            // Use arg array — no shell interpolation
-            diffOutput = runGit(
-              ['diff', `${commit.hash}~1`, commit.hash],
-              vaultDir
-            );
-          } catch (parentErr) {
-            diffOutput = runGit(
-              ['diff-tree', '--root', '-p', '--no-commit-id', commit.hash],
-              vaultDir
-            );
-          }
-
-          if (diffOutput.trim()) {
-            const logs = parseCommitDiff(diffOutput, commit.vault.collectionName, commit.subject);
+          if (commit.diffText && commit.diffText.trim()) {
+            const logs = parseCommitDiff(commit.diffText, commit.vault.collectionName, commit.subject);
             dateLogs.push(...logs);
           }
         } catch (err) {
@@ -292,7 +307,11 @@ function parseCommitDiff(diffText, explicitCollection, commitMessage) {
 
 function formatCommitLogs(changes, commitMessage, explicitCollection) {
   const added = changes.filter(c => c.type === 'added');
-  const removed = changes.filter(c => c.type === 'removed');
+  const removed = changes.filter(c => c.type === 'removed').map(r => ({
+    item: r,
+    name: extractSiteName(r.content),
+    url: extractSiteUrl(r.content)
+  }));
   const processedRemoved = new Set();
   const outputLogs = [];
 
@@ -302,41 +321,35 @@ function formatCommitLogs(changes, commitMessage, explicitCollection) {
 
     const candidates = [];
     for (let i = 0; i < removed.length; i++) {
-      if (skipSet.has(i) || removed[i].collection !== addedItem.collection) continue;
-      candidates.push({ idx: i, item: removed[i] });
+      if (skipSet.has(i) || removed[i].item.collection !== addedItem.collection) continue;
+      candidates.push({ idx: i, item: removed[i].item, name: removed[i].name, url: removed[i].url });
     }
 
     if (itemUrl) {
       for (const c of candidates) {
-        const rUrl = extractSiteUrl(c.item.content);
-        if (rUrl && rUrl === itemUrl) return c.idx;
+        if (c.url && c.url === itemUrl) return c.idx;
       }
     }
 
     if (itemName) {
       for (const c of candidates) {
-        const rName = extractSiteName(c.item.content);
-        if (rName === itemName && c.item.section === addedItem.section && c.item.filePath === addedItem.filePath) return c.idx;
+        if (c.name === itemName && c.item.section === addedItem.section && c.item.filePath === addedItem.filePath) return c.idx;
       }
       for (const c of candidates) {
-        const rName = extractSiteName(c.item.content);
-        if (rName === itemName && c.item.section === addedItem.section) return c.idx;
+        if (c.name === itemName && c.item.section === addedItem.section) return c.idx;
       }
       for (const c of candidates) {
-        const rName = extractSiteName(c.item.content);
-        if (rName === itemName && c.item.filePath === addedItem.filePath && itemName !== "") return c.idx;
+        if (c.name === itemName && c.item.filePath === addedItem.filePath && itemName !== "") return c.idx;
       }
       for (const c of candidates) {
-        const rName = extractSiteName(c.item.content);
-        if (rName === itemName && itemName !== "") return c.idx;
+        if (c.name === itemName && itemName !== "") return c.idx;
       }
     }
 
-    if (itemName && itemName.length > 4) {
+    if (itemName && itemName.length > 4 && candidates.length < 100) {
       for (const c of candidates) {
-        const rName = extractSiteName(c.item.content);
-        if (rName.length > 4 && Math.abs(rName.length - itemName.length) <= 3) {
-          if (calculateLevenshtein(rName, itemName) <= 3) return c.idx;
+        if (c.name.length > 4 && Math.abs(c.name.length - itemName.length) <= 3) {
+          if (calculateLevenshtein(c.name, itemName) <= 3) return c.idx;
         }
       }
     }
@@ -356,8 +369,8 @@ function formatCommitLogs(changes, commitMessage, explicitCollection) {
 
     if (matchIndex !== -1) {
       processedRemoved.add(matchIndex);
-      const oldItem = removed[matchIndex];
-      const oldItemName = extractSiteName(oldItem.content);
+      const oldItem = removed[matchIndex].item;
+      const oldItemName = removed[matchIndex].name;
 
       if (oldItem.section !== addedItem.section || oldItem.filePath !== addedItem.filePath) {
         actionType = "moved";
@@ -417,21 +430,22 @@ function formatCommitLogs(changes, commitMessage, explicitCollection) {
   removed.forEach((removedItem, idx) => {
     if (processedRemoved.has(idx)) return;
 
-    const itemName = extractSiteName(removedItem.content);
-    const itemUrl = extractSiteUrl(removedItem.content);
-    const itemType = getItemType(removedItem.content, removedItem.section);
-    const isTutorial = removedItem.collection.startsWith('tutorials');
+    const originalItem = removedItem.item;
+    const itemName = removedItem.name;
+    const itemUrl = removedItem.url;
+    const itemType = getItemType(originalItem.content, originalItem.section);
+    const isTutorial = originalItem.collection.startsWith('tutorials');
 
     let msg = "";
     if (itemType === 'plugin') {
-      msg = `plugin ${itemName} removed from section ${removedItem.section}`;
+      msg = `plugin ${itemName} removed from section ${originalItem.section}`;
     } else if (itemType === 'list_entry') {
-      msg = `list entry ${itemName} removed from ${isTutorial ? 'tutorial' : 'list'} ${removedItem.section}`;
+      msg = `list entry ${itemName} removed from ${isTutorial ? 'tutorial' : 'list'} ${originalItem.section}`;
     } else {
-      msg = `${isTutorial ? 'tutorial note' : 'site'} ${itemName} removed from section ${removedItem.section}`;
+      msg = `${isTutorial ? 'tutorial note' : 'site'} ${itemName} removed from section ${originalItem.section}`;
     }
 
-    const rawPath = removedItem.filePath ? `/${explicitCollection}/${removedItem.filePath}` : '';
+    const rawPath = originalItem.filePath ? `/${explicitCollection}/${originalItem.filePath}` : '';
     const pageUrl = rawPath ? sanitizePath(rawPath) : '';
 
     outputLogs.push({
@@ -441,8 +455,8 @@ function formatCommitLogs(changes, commitMessage, explicitCollection) {
       name: itemName,
       url: itemUrl,
       pageUrl: pageUrl,
-      sectionTitle: removedItem.section,
-      collectionName: removedItem.collection,
+      sectionTitle: originalItem.section,
+      collectionName: originalItem.collection,
       commitMessage: commitMessage
     });
   });
