@@ -47,8 +47,10 @@ async function loadSearchData() {
     // Use PBKDF2 to derive the key in the browser
     const enc = new TextEncoder();
     const baseKey = await crypto.subtle.importKey('raw', enc.encode(savedPass), { name: 'PBKDF2' }, false, ['deriveKey']);
+    
+    // FIX: Must match the exact iterations used in secure-vault.mjs (2,000,000)
     const cryptoKey = await crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt, iterations: 2000000, hash: 'SHA-512' },
       baseKey,
       { name: 'AES-GCM', length: 256 },
       false,

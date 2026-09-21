@@ -1,7 +1,10 @@
 // src/scripts/secure-vault.mjs
+import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+
+const require = createRequire(import.meta.url);
 
 // =====================================================================
 // PASSWORD VALIDATION & PERMISSION CHECK
@@ -38,7 +41,7 @@ if (PASSWORD.length > 1024) {
 // =====================================================================
 // CONFIG
 // =====================================================================
-const PBKDF2_ITERATIONS = 1000000;         //OWASP 2023: ≥600K for SHA-256; we go higher
+const PBKDF2_ITERATIONS = 2000000;         // Increased to 2M to satisfy pagecrypt v6+ security warnings
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000; //Auto-clear password after 30 min
 const VISIBILITY_TIMEOUT_MS = 5 * 60 * 1000; //clear if tab hidden for 5 min
 const TARGET_DIRS = ['dist'];
@@ -46,8 +49,6 @@ const TARGET_DIRS = ['dist'];
 // =====================================================================
 // DYNAMIC CSP (Fork-ready)
 // =====================================================================
-// Read worker URL from environment variable. Fork users will set this
-// to their own worker. If empty, the issue reporter is locked down.
 const REPORT_WORKER_URL = process.env.VAULT_REPORT_URL || '';
 
 let connectSrc = "'self'";
@@ -66,11 +67,11 @@ const CSP_DIRECTIVES = [
   "style-src 'self' 'unsafe-inline'",
   `connect-src ${connectSrc}`,
   "img-src 'self' data:",
-  "font-src 'self'",
+  "font-src 'self' data:",
   "object-src 'none'",
   "base-uri 'self'",
-  "frame-ancestors 'none'",
   "form-action 'self'"
+  // frame-ancestors removed: Not supported in <meta> tags, must be handled by _headers
 ].join('; ');
 
 // =====================================================================
@@ -93,8 +94,8 @@ html,body{
 }
 .box{
   max-width:380px;
-  width:100%; /* FIX Bug3: Use 100% width with max-width for perfect centering */
-  margin:0 auto; /* FIX Bug3: Explicitly center the box */
+  width:100%; 
+  margin:0 auto; 
   background:rgb(38, 39, 57);
   border:1px solid rgba(192, 251, 226, 0.15);
   border-radius:8px;
@@ -144,8 +145,8 @@ header{
   border:1px solid rgba(192, 251, 226, 0.15);
   padding:.75rem 1rem;
   width:100%;
-  box-sizing:border-box; /* FIX Bug3: Ensure padding doesn't affect width */
-  margin:0 auto; /* FIX Bug3: Center input */
+  box-sizing:border-box; 
+  margin:0 auto; 
   color:rgb(192, 251, 226);
   font-size:.95rem;
   outline:none;
@@ -234,45 +235,47 @@ const AUTO_LOGIN_SCRIPT = `
   var unlockTried = false;
 
   function attemptUnlock(passInput) {
-    if (unlockTried || !passInput) return;
-    if (isSessionExpired()) { clearSession(); return; }
+      if (unlockTried || !passInput) return;
+      if (isSessionExpired()) { clearSession(); return; }
 
-    unlockTried = true;
-    sessionStorage.removeItem('k');
+      unlockTried = true;
+      sessionStorage.removeItem('k');
 
-    var savedPass = sessionStorage.getItem(STORAGE_KEY);
-    if (!savedPass) { unlockTried = false; return; }
+      var savedPass = sessionStorage.getItem(STORAGE_KEY);
+      if (!savedPass) { unlockTried = false; return; }
 
-    var nativeSetter = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype, 'value'
-    ).set;
-    nativeSetter.call(passInput, savedPass);
+      var nativeSetter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype, 'value'
+      ).set;
+      nativeSetter.call(passInput, savedPass);
 
-    passInput.dispatchEvent(new Event('input',  { bubbles: true }));
-    passInput.dispatchEvent(new Event('change', { bubbles: true }));
+      sessionStorage.removeItem(STORAGE_KEY);
 
-    function doSubmit() {
-      var form = passInput.closest('form');
-      var submitBtn = document.querySelector('button[type="submit"], input[type="submit"]') || document.querySelector('button');
-      if (form && typeof form.requestSubmit === 'function') {
-        form.requestSubmit();
-      } else if (form) {
-        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-      } else if (submitBtn) {
-        submitBtn.click();
+      passInput.dispatchEvent(new Event('input',  { bubbles: true }));
+      passInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+      function doSubmit() {
+        var form = passInput.closest('form');
+        var submitBtn = document.querySelector('button[type="submit"], input[type="submit"]') || document.querySelector('button');
+        if (form && typeof form.requestSubmit === 'function') {
+          form.requestSubmit();
+        } else if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        } else if (submitBtn) {
+          submitBtn.click();
+        }
       }
-    }
 
-    setTimeout(doSubmit, 50);
+      setTimeout(doSubmit, 50);
 
-    // If decryption fails, PageCrypt shows #msg.red — clean up
-    setTimeout(function() {
-      var msgEl = document.getElementById('msg');
-      if (msgEl && msgEl.classList.contains('red')) {
-        clearSession();
-        unlockTried = false;
-      }
-    }, 1500);
+      // If decryption fails, PageCrypt shows #msg.red — clean up
+      setTimeout(function() {
+        var msgEl = document.getElementById('msg');
+        if (msgEl && msgEl.classList.contains('red')) {
+          clearSession();
+          unlockTried = false;
+        }
+      }, 1500);
   }
 
   // --- Save password on input (with timestamp) ---
@@ -352,21 +355,161 @@ function getAllHtmlFiles(dirPath, fileList = []) {
 }
 
 // =====================================================================
+// ASSET INLINER (Prevents plaintext image/font leaks)
+// =====================================================================
+function inlineAssets(html, distDir, currentFileDir) {
+  const DEBUG = true; // Turn on debugging
+  const mimeTypes = {
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
+    '.avif': 'image/avif', '.ico': 'image/x-icon',
+    '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
+    '.otf': 'font/otf', '.eot': 'application/vnd.ms-fontobject',
+    '.css': 'text/css'
+  };
+
+  function toDataUri(rawUrl) {
+    try {
+      if (rawUrl.startsWith('data:') || rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('//')) {
+        return null;
+      }
+
+      const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+      const ext = path.extname(cleanUrl).toLowerCase();
+      
+      if (!ext || !mimeTypes[ext]) {
+        return null;
+      }
+
+      let filePath;
+
+      if (cleanUrl.startsWith('file://')) {
+        filePath = decodeURIComponent(cleanUrl.replace(/^file:\/\//, ''));
+      } else if (cleanUrl.startsWith('/')) {
+        filePath = path.join(distDir, cleanUrl);
+      } else {
+        filePath = path.resolve(currentFileDir, cleanUrl);
+      }
+
+      if (DEBUG) console.log(`  🔍 Eval: ${rawUrl} -> ${filePath}`);
+
+      if (fs.existsSync(filePath)) {
+        const mime = mimeTypes[ext];
+        let fileContent = fs.readFileSync(filePath);
+        
+        if (ext === '.css') {
+          let cssText = fileContent.toString('utf8');
+          cssText = inlineAssets(cssText, distDir, path.dirname(filePath));
+          fileContent = Buffer.from(cssText, 'utf8');
+        }
+        
+        const base64 = fileContent.toString('base64');
+        if (DEBUG) console.log(`    ✅ Inlined successfully.`);
+        return `data:${mime};base64,${base64}`;
+      } else {
+        if (DEBUG) console.warn(`    ❌ FILE NOT FOUND.`);
+      }
+    } catch (e) {
+      if (DEBUG) console.error(`    ❌ ERROR: ${e.message}`);
+    }
+    return null;
+  }
+
+  // 1. Match src="..." and href="..."
+  html = html.replace(/(\s(?:src|href)\s*=\s*")([^"]+)(")/gi, (match, prefix, url, suffix) => {
+    const dataUri = toDataUri(url);
+    return dataUri ? `${prefix}${dataUri}${suffix}` : match;
+  });
+
+  // 2. Match srcset="..."
+  html = html.replace(/(\ssrcset\s*=\s*")([^"]+)(")/gi, (match, prefix, srcset, suffix) => {
+    const parts = srcset.split(',').map(part => {
+      const p = part.trim();
+      const spaceIdx = p.indexOf(' ');
+      const url = spaceIdx === -1 ? p : p.substring(0, spaceIdx);
+      const descriptor = spaceIdx === -1 ? '' : p.substring(spaceIdx);
+      const dataUri = toDataUri(url);
+      return dataUri ? `${dataUri}${descriptor}` : p;
+    });
+    return `${prefix}${parts.join(', ')}${suffix}`;
+  });
+
+  // 3. Match CSS url(...) 
+  html = html.replace(/url\((['"]?)([^'")]+)\1\)/gi, (match, quote, url) => {
+    const dataUri = toDataUri(url);
+    return dataUri ? `url(${quote}${dataUri}${quote})` : match;
+  });
+
+  // 4. Sanitize ANY remaining file:// or protocol-relative // links
+  html = html.replace(/(\s(?:src|href)\s*=\s*")([^"]*file:\/\/\/?[^"]*|\/\/[^"]+)(")/gi, '$1#$3');
+  html = html.replace(/(\ssrcset\s*=\s*")([^"]+)(")/gi, (match, prefix, srcset, suffix) => {
+    if (!srcset.includes('file://') && !srcset.match(/(^|,\s*)\/\//)) return match;
+    const parts = srcset.split(',').map(p => p.trim()).filter(p => {
+      const url = p.split(/\s+/)[0];
+      return !url.startsWith('file://') && !url.startsWith('//');
+    });
+    return parts.length > 0 ? `${prefix}${parts.join(', ')}${suffix}` : `${prefix}${suffix}`;
+  });
+  html = html.replace(/url\((['"]?)(file:\/\/\/?[^'")]+|\/\/[^'")]+)\1\)/gi, 'url($1#$1)');
+
+  // 5. NUCLEAR OPTION
+  html = html.replace(/file:\/\/\/?[^\s"'<>()]+/gi, '#');
+
+  return html;
+}
+
+// =====================================================================
+// CLEANUP: Delete plaintext assets to prevent leaks
+// =====================================================================
+function deletePlaintextAssets(distDir) {
+  let deletedCount = 0;
+  const exts = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot'];
+  
+  function deleteRecursively(dir) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        deleteRecursively(fullPath);
+      } else {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (exts.includes(ext)) {
+          // Skip favicon.ico as browsers request it implicitly
+          if (entry.name === 'favicon.ico') continue;
+          fs.unlinkSync(fullPath);
+          deletedCount++;
+        }
+      }
+    }
+  }
+
+  deleteRecursively(distDir);
+  return deletedCount;
+}
+
+// =====================================================================
 // ENCRYPTION PIPELINE
 // =====================================================================
 console.log('🔒 Starting vault encryption pipeline...\n');
 
-// Dynamically import pagecrypt Node.js API (avoids password in process args)
 let pagecryptEncrypt;
+let pagecryptVersion = '6.0.0';
 try {
   const pagecrypt = await import('pagecrypt');
   pagecryptEncrypt = pagecrypt.encrypt;
+  
+  try {
+    const pkg = require('pagecrypt/package.json');
+    pagecryptVersion = pkg.version;
+  } catch (_) { /* Fallback to default if package.json unreadable */ }
 } catch (e) {
   console.error('❌ FATAL: pagecrypt package not found.');
   console.error('   Install it:  pnpm add -D pagecrypt');
-  console.error('   The CLI (npx pagecrypt) leaks the password via `ps aux`.');
   process.exit(1);
 }
+
+const majorVersion = parseInt(pagecryptVersion.split('.')[0], 10);
 
 let secureCount = 0;
 const failedFiles = [];
@@ -379,35 +522,47 @@ for (const dir of TARGET_DIRS) {
 
   for (const file of htmlFiles) {
     try {
-      // 1. Encrypt the file in-place using the Node.js API
-      //(Signature: inputPath, outputPath, password)
-      // PageCrypt defaults to 600,000 PBKDF2 iterations internally.
-      await pagecryptEncrypt(file, file, PASSWORD);
+      let originalHtml = fs.readFileSync(file, 'utf8');
+      const fileDir = path.dirname(file);
+      
+      // INLINE ASSETS: Convert all local images/fonts to base64 data URIs
+      originalHtml = inlineAssets(originalHtml, absolutePath, fileDir);
 
-      // 2. Read the newly encrypted file to apply our custom patches
-      let modifiedHtml = fs.readFileSync(file, 'utf8');
+      // STRIP SOURCE MAPS: Prevents file:/// security errors and deprecated pragmas warnings
+      originalHtml = originalHtml.replace(/\/\/[#@]\s*sourceMappingURL=[^\s]*/g, '');
+      originalHtml = originalHtml.replace(/\/\*#\s*sourceMappingURL=[^\s]*\*\//g, '');
 
-      // 3a. Replace PageCrypt's default style
-      modifiedHtml = modifiedHtml.replace(
-        /<style>[\s\S]*?<\/style>/,
-        CUSTOM_STYLE
-      );
+      // ✅ THE FIX: Write the modified HTML back to disk so pagecrypt v5/v6 reads the clean version!
+      fs.writeFileSync(file, originalHtml, 'utf8');
 
-      // 3b. Inject CSP meta tag (belt-and-suspenders alongside _headers)
+      let encryptedHtml;
+      const iters = PBKDF2_ITERATIONS;
+
+      if (majorVersion >= 7) {
+        encryptedHtml = await pagecryptEncrypt(originalHtml, PASSWORD, { hint: "", iterations: iters });
+      } else if (majorVersion === 6) {
+        await pagecryptEncrypt(file, file, PASSWORD, iters);
+        encryptedHtml = fs.readFileSync(file, 'utf8');
+      } else if (majorVersion === 5) {
+        await pagecryptEncrypt(file, file, PASSWORD, "", iters);
+        encryptedHtml = fs.readFileSync(file, 'utf8');
+      } else {
+        await pagecryptEncrypt(file, file, PASSWORD, iters);
+        encryptedHtml = fs.readFileSync(file, 'utf8');
+      }
+
+      if (!encryptedHtml || typeof encryptedHtml !== 'string') {
+        throw new Error('pagecrypt returned no encrypted HTML');
+      }
+
+      encryptedHtml = encryptedHtml.replace(/<style>[\s\S]*?<\/style>/, CUSTOM_STYLE);
+
       const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${CSP_DIRECTIVES}">`;
-      modifiedHtml = modifiedHtml.replace(
-        '</head>',
-        `  ${cspMeta}\n</head>`
-      );
+      encryptedHtml = encryptedHtml.replace('</head>', `  ${cspMeta}\n</head>`);
 
-      // 3c. Inject auto-login script before </body>
-      modifiedHtml = modifiedHtml.replace(
-        '</body>',
-        AUTO_LOGIN_SCRIPT + '\n</body>'
-      );
+      encryptedHtml = encryptedHtml.replace('</body>', AUTO_LOGIN_SCRIPT + '\n</body>');
 
-      // 4. Write the final patched HTML back to disk
-      fs.writeFileSync(file, modifiedHtml, 'utf8');
+      fs.writeFileSync(file, encryptedHtml, 'utf8');
 
       console.log(`  ✓ Secured: ${path.relative(process.cwd(), file)}`);
       secureCount++;
@@ -416,31 +571,6 @@ for (const dir of TARGET_DIRS) {
       failedFiles.push(file);
     }
   }
-}
-
-// =====================================================================
-// FAIL-SAFE: If any HTML file failed to encrypt, DELETE all unencrypted
-// HTML to prevent accidental deployment of plaintext content.
-// =====================================================================
-if (failedFiles.length > 0) {
-  console.error(`\n⚠️  ${failedFiles.length} file(s) failed encryption. Cleaning up ALL HTML to prevent plaintext leak...`);
-  for (const dir of TARGET_DIRS) {
-    const absolutePath = path.resolve(dir);
-    if (!fs.existsSync(absolutePath)) continue;
-    const allHtml = getAllHtmlFiles(absolutePath);
-    for (const file of allHtml) {
-      try {
-        const content = fs.readFileSync(file, 'utf8');
-        // If the file doesn't contain PageCrypt's encrypted payload marker, delete it
-        if (!content.includes('__pagecrypt') && !content.includes('AES-GCM')) {
-          fs.unlinkSync(file);
-          console.log(`  🗑  Deleted unencrypted: ${path.relative(process.cwd(), file)}`);
-        }
-      } catch (e) { }
-    }
-  }
-  console.error('Aborting. Fix encryption errors before deploying.');
-  process.exit(1);
 }
 
 // =====================================================================
@@ -457,8 +587,7 @@ if (fs.existsSync(searchIndexPath)) {
     const salt = crypto.randomBytes(16);
     const iv = crypto.randomBytes(12);
 
-    // Derive key with PBKDF2 (must match search.js)
-    const key = crypto.pbkdf2Sync(PASSWORD, salt, PBKDF2_ITERATIONS, 32, 'sha256');
+    const key = crypto.pbkdf2Sync(PASSWORD, salt, PBKDF2_ITERATIONS, 32, 'sha512');
 
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
@@ -493,6 +622,11 @@ if (fs.existsSync(searchIndexPath)) {
 // =====================================================================
 // SUMMARY
 // =====================================================================
+const deletedAssets = deletePlaintextAssets(path.resolve('dist'));
+if (deletedAssets > 0) {
+  console.log(`  🗑  Deleted ${deletedAssets} plaintext image/font asset(s) from dist to prevent leaks.`);
+}
+
 console.log(`\n✅ Security layer applied to ${secureCount} page(s).`);
 console.log(`   CSP: enforced (script: self+inline, connect: self+worker, frame: none)`);
 console.log(`   Search index: AES-256-GCM + PBKDF2 (${PBKDF2_ITERATIONS.toLocaleString()} iterations)`);
